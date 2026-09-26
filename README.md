@@ -199,6 +199,3 @@ Open your browser at: **`http://localhost:5173`**
 | `stock_ledger` | Immutable audit trail of every stock modification |
 
 ---
-
-## 🛡️ License
-Open-source under the MIT License.
