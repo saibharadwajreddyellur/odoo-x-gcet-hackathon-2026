@@ -1,6 +1,6 @@
 import os
 from typing import List, Union
-from pydantic import AnyHttpUrl, validator
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -11,7 +11,6 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24  # 1 day
     
     # Database
-    # Default to sqlite:///./stocksense.db if PostgreSQL/Supabase is not configured yet
     DATABASE_URL: str = os.getenv("DATABASE_URL", "sqlite:///./stocksense.db")
 
     # Supabase optional configuration
@@ -26,6 +25,36 @@ class Settings(BaseSettings):
         "http://localhost:3000",
         "http://127.0.0.1:3000",
     ]
+
+    # Email / SMTP Configuration
+    SMTP_HOST: str = ""
+    SMTP_PORT: int = 587
+    SMTP_USER: str = ""
+    SMTP_PASSWORD: str = ""
+    SMTP_TLS: bool = True
+    EMAILS_FROM_EMAIL: str = "noreply@stocksense.io"
+    EMAILS_FROM_NAME: str = "StockSense Security"
+
+    @field_validator("SMTP_PORT", mode="before")
+    @classmethod
+    def parse_smtp_port(cls, v):
+        if v is None or str(v).strip() == "":
+            return 587
+        return int(v)
+
+    @field_validator("SMTP_TLS", mode="before")
+    @classmethod
+    def parse_smtp_tls(cls, v):
+        if v is None or str(v).strip() == "":
+            return True
+        if isinstance(v, bool):
+            return v
+        return str(v).lower() in ("true", "1", "yes")
+
+    # OTP Configuration
+    OTP_EXPIRE_MINUTES: int = 10
+    OTP_RESEND_COOLDOWN_SECONDS: int = 60
+    OTP_MAX_ATTEMPTS: int = 5
 
     model_config = SettingsConfigDict(
         env_file=".env",

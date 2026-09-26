@@ -1,6 +1,6 @@
 from datetime import datetime
 from typing import Optional
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from fastapi import HTTPException, status
 from app.models.product import Product, StockLevel
 from app.models.receipt import Receipt, ReceiptItem
@@ -57,7 +57,7 @@ def record_ledger_entry(
 
 
 def validate_receipt(db: Session, receipt_id: int, user_id: Optional[int] = None) -> Receipt:
-    receipt = db.query(Receipt).filter(Receipt.id == receipt_id).first()
+    receipt = db.query(Receipt).options(joinedload(Receipt.items)).filter(Receipt.id == receipt_id).first()
     if not receipt:
         raise HTTPException(status_code=404, detail="Receipt not found")
     if receipt.status in ["DONE", "VALIDATED"]:
@@ -97,7 +97,7 @@ def validate_receipt(db: Session, receipt_id: int, user_id: Optional[int] = None
 
 
 def validate_delivery(db: Session, delivery_id: int, user_id: Optional[int] = None) -> Delivery:
-    delivery = db.query(Delivery).filter(Delivery.id == delivery_id).first()
+    delivery = db.query(Delivery).options(joinedload(Delivery.items)).filter(Delivery.id == delivery_id).first()
     if not delivery:
         raise HTTPException(status_code=404, detail="Delivery order not found")
     if delivery.status in ["DONE", "VALIDATED"]:
@@ -148,7 +148,7 @@ def validate_delivery(db: Session, delivery_id: int, user_id: Optional[int] = No
 
 
 def complete_transfer(db: Session, transfer_id: int, user_id: Optional[int] = None) -> InternalTransfer:
-    transfer = db.query(InternalTransfer).filter(InternalTransfer.id == transfer_id).first()
+    transfer = db.query(InternalTransfer).options(joinedload(InternalTransfer.items)).filter(InternalTransfer.id == transfer_id).first()
     if not transfer:
         raise HTTPException(status_code=404, detail="Transfer not found")
     if transfer.status == "COMPLETED":

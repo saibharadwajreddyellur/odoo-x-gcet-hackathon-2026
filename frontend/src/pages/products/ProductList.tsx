@@ -4,7 +4,7 @@ import { Product, Category, Warehouse } from '../../types';
 import { Badge } from '../../components/common/Badge';
 import { Modal } from '../../components/common/Modal';
 import {
-  Package, Plus, Search, MapPin, AlertCircle, CheckCircle, Tag, Boxes
+  Package, Plus, Search, MapPin, AlertCircle, CheckCircle, Tag, Boxes, ShieldAlert
 } from 'lucide-react';
 import { NavTab } from '../../components/common/Sidebar';
 import { useAuth } from '../../context/AuthContext';
@@ -104,6 +104,21 @@ export const ProductList: React.FC<ProductListProps> = ({ onNavigateTab }) => {
 
   return (
     <div className="space-y-6">
+      {/* RBAC Notice for non-managers */}
+      {!isManager && (
+        <div className="p-3.5 bg-amber-50 rounded-xl border border-amber-200/80 text-amber-900 text-xs flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <ShieldAlert className="w-4 h-4 text-amber-600 shrink-0" />
+            <span>
+              <strong>Operational Catalog View:</strong> SKU registration, pricing, and reorder rule configurations are managed by Inventory Managers.
+            </span>
+          </div>
+          <span className="font-mono text-[10px] px-2 py-0.5 rounded bg-amber-100 font-semibold text-amber-800">
+            STAFF VIEW
+          </span>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-white p-5 rounded-xl border border-slate-200/80 shadow-sm">
         <div>

@@ -1,6 +1,6 @@
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from app.api.deps import get_db, require_inventory_manager
 from app.models.warehouse import Warehouse, Location
 from app.models.user import User
@@ -13,7 +13,7 @@ router = APIRouter()
 
 @router.get("", response_model=List[WarehouseOut])
 def list_warehouses(db: Session = Depends(get_db)):
-    return db.query(Warehouse).filter(Warehouse.is_active == True).all()
+    return db.query(Warehouse).options(joinedload(Warehouse.locations)).filter(Warehouse.is_active == True).all()
 
 
 @router.post("", response_model=WarehouseOut, status_code=status.HTTP_201_CREATED)
@@ -112,3 +112,31 @@ def update_warehouse(
     db.commit()
     db.refresh(wh)
     return wh
+
+
+@router.delete("/{warehouse_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_warehouse(
+    warehouse_id: int,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_inventory_manager)
+):
+    wh = db.query(Warehouse).filter(Warehouse.id == warehouse_id).first()
+    if not wh:
+        raise HTTPException(status_code=404, detail="Warehouse not found")
+    wh.is_active = False
+    db.commit()
+    return None
+
+
+@router.delete("/locations/{location_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_location(
+    location_id: int,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_inventory_manager)
+):
+    loc = db.query(Location).filter(Location.id == location_id).first()
+    if not loc:
+        raise HTTPException(status_code=404, detail="Location not found")
+    loc.is_active = False
+    db.commit()
+    return None

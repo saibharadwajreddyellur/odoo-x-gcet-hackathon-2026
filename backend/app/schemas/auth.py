@@ -41,7 +41,24 @@ class PasswordResetRequest(BaseModel):
     email: EmailStr
 
 
-class PasswordResetConfirm(BaseModel):
+class PasswordResetResponse(BaseModel):
+    message: str
+    email: EmailStr
+    cooldown_seconds: int = 60
+
+
+class OTPVerifyRequest(BaseModel):
     email: EmailStr
     otp: str
+
+
+class OTPVerifyResponse(BaseModel):
+    message: str
+    reset_token: str
+
+
+class PasswordResetConfirm(BaseModel):
+    email: EmailStr
     new_password: str
+    otp: Optional[str] = None
+    reset_token: Optional[str] = None

@@ -1,9 +1,10 @@
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from app.api.deps import get_db, get_current_user, require_inventory_manager
 from app.models.product import Product, StockLevel
 from app.models.category import Category
+from app.models.warehouse import Location
 from app.models.user import User
 from app.schemas.product import (
     ProductCreate, ProductUpdate, ProductOut, StockLevelOut,
@@ -84,7 +85,10 @@ def list_products(
     stock_status: Optional[str] = None,
     db: Session = Depends(get_db)
 ):
-    query = db.query(Product)
+    query = db.query(Product).options(
+        joinedload(Product.category),
+        joinedload(Product.stock_levels).joinedload(StockLevel.location).joinedload(Location.warehouse)
+    )
     if search:
         search_fmt = f"%{search}%"
         query = query.filter((Product.name.ilike(search_fmt)) | (Product.sku.ilike(search_fmt)))
@@ -150,7 +154,10 @@ def create_product(
 
 @router.get("/{product_id}", response_model=ProductOut)
 def get_product(product_id: int, db: Session = Depends(get_db)):
-    product = db.query(Product).filter(Product.id == product_id).first()
+    product = db.query(Product).options(
+        joinedload(Product.category),
+        joinedload(Product.stock_levels).joinedload(StockLevel.location).joinedload(Location.warehouse)
+    ).filter(Product.id == product_id).first()
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
     return build_product_out(product)
@@ -174,3 +181,17 @@ def update_product(
     db.commit()
     db.refresh(product)
     return build_product_out(product)
+
+
+@router.delete("/{product_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_product(
+    product_id: int,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_inventory_manager)
+):
+    product = db.query(Product).filter(Product.id == product_id).first()
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+    db.delete(product)
+    db.commit()
+    return None

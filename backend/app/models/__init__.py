@@ -8,6 +8,7 @@ from app.models.delivery import Delivery, DeliveryItem
 from app.models.transfer import InternalTransfer, TransferItem
 from app.models.adjustment import StockAdjustment
 from app.models.ledger import StockLedger
+from app.models.password_reset import PasswordReset
 
 __all__ = [
     "Base",
@@ -25,4 +26,5 @@ __all__ = [
     "TransferItem",
     "StockAdjustment",
     "StockLedger",
+    "PasswordReset",
 ]

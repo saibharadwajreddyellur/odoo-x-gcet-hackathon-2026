@@ -18,10 +18,11 @@ import { Profile } from './pages/Profile';
 import { Product } from './types';
 
 const MainApp: React.FC = () => {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isManager } = useAuth();
   const [authView, setAuthView] = useState<'LOGIN' | 'SIGNUP' | 'FORGOT'>('LOGIN');
   const [currentTab, setCurrentTab] = useState<NavTab>('dashboard');
   const [quickReceiptProduct, setQuickReceiptProduct] = useState<Product | null>(null);
+
 
   // If not logged in, show auth screens
   if (!isAuthenticated) {

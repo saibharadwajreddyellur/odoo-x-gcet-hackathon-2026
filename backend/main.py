@@ -6,7 +6,7 @@ from app.core.config import settings
 from app.core.database import engine, Base, SessionLocal
 from app.api.v1.router import api_router
 from app.models import (
-    User, Category, Warehouse, Location, Product, StockLevel, StockLedger
+    User, Category, Warehouse, Location, Product, StockLevel, StockLedger, PasswordReset
 )
 from app.core.security import get_password_hash
 

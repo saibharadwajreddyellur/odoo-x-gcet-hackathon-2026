@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Boxes, ArrowLeft, KeyRound, CheckCircle, AlertCircle } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { ArrowLeft, KeyRound, CheckCircle, AlertCircle, RefreshCw, Mail } from 'lucide-react';
 
 interface ForgotPasswordProps {
   onNavigateLogin: () => void;
@@ -8,63 +8,139 @@ interface ForgotPasswordProps {
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
 
 export const ForgotPassword: React.FC<ForgotPasswordProps> = ({ onNavigateLogin }) => {
-  const [email, setEmail] = useState('admin@stocksense.io');
+  const [email, setEmail] = useState('');
   const [step, setStep] = useState<'REQUEST' | 'VERIFY' | 'SUCCESS'>('REQUEST');
   const [otp, setOtp] = useState('');
-  const [demoGeneratedOtp, setDemoGeneratedOtp] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [resending, setResending] = useState(false);
+  const [cooldown, setCooldown] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const [infoMessage, setInfoMessage] = useState<string | null>(null);
+
+  // Active cooldown countdown timer
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const interval = setInterval(() => {
+      setCooldown((prev) => Math.max(0, prev - 1));
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [cooldown]);
 
   const handleRequestOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
+    setInfoMessage(null);
+
     try {
       const res = await fetch(`${API_BASE_URL}/auth/forgot-password`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email })
+        body: JSON.stringify({ email: email.trim().toLowerCase() })
       });
+
+      const data = await res.json().catch(() => ({}));
+
       if (res.ok) {
-        const data = await res.json();
-        const generated = data.demo_otp || Math.floor(100000 + Math.random() * 900000).toString();
-        setDemoGeneratedOtp(generated);
-        setOtp(generated);
         setStep('VERIFY');
+        setOtp('');
+        setCooldown(data.cooldown_seconds || 60);
+        setInfoMessage(data.message || 'A 6-digit verification code has been dispatched.');
       } else {
-        const err = await res.json().catch(() => ({ detail: 'Failed to request reset OTP' }));
-        setError(err.detail || 'Failed to generate OTP. Please try again.');
+        setError(data.detail || 'Failed to request password reset code.');
       }
     } catch {
-      // Local fallback
-      const generated = Math.floor(100000 + Math.random() * 900000).toString();
-      setDemoGeneratedOtp(generated);
-      setOtp(generated);
-      setStep('VERIFY');
+      setError('Unable to reach authentication server. Please check your connection.');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleResetPassword = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
+  const handleResendOtp = async () => {
+    if (cooldown > 0 || resending) return;
+    setResending(true);
     setError(null);
+    setInfoMessage(null);
+
     try {
-      const res = await fetch(`${API_BASE_URL}/auth/reset-password`, {
+      const res = await fetch(`${API_BASE_URL}/auth/resend-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, otp, new_password: newPassword })
+        body: JSON.stringify({ email: email.trim().toLowerCase() })
       });
+
+      const data = await res.json().catch(() => ({}));
+
       if (res.ok) {
-        setStep('SUCCESS');
+        setCooldown(data.cooldown_seconds || 60);
+        setInfoMessage('A new verification code has been sent to your email.');
       } else {
-        const err = await res.json().catch(() => ({ detail: 'Failed to reset password' }));
-        setError(err.detail || 'Password reset failed. Invalid or expired OTP.');
+        setError(data.detail || 'Failed to resend code. Please try again later.');
       }
     } catch {
-      setStep('SUCCESS');
+      setError('Connection failure while requesting new code.');
+    } finally {
+      setResending(false);
+    }
+  };
+
+  const handleResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+
+    const cleanOtp = otp.trim();
+    if (cleanOtp.length !== 6 || !/^\d+$/.test(cleanOtp)) {
+      setError('Please enter the complete 6-digit verification code.');
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      setError('Password must be at least 6 characters long.');
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      // 1. Verify OTP in FastAPI to ensure valid code, expiry, and attempt limits
+      const verifyRes = await fetch(`${API_BASE_URL}/auth/verify-otp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: email.trim().toLowerCase(),
+          otp: cleanOtp
+        })
+      });
+
+      const verifyData = await verifyRes.json().catch(() => ({}));
+
+      if (!verifyRes.ok) {
+        setError(verifyData.detail || 'Invalid or expired verification code.');
+        setLoading(false);
+        return;
+      }
+
+      // 2. Complete password change using the verified reset token
+      const resetRes = await fetch(`${API_BASE_URL}/auth/reset-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: email.trim().toLowerCase(),
+          reset_token: verifyData.reset_token,
+          new_password: newPassword
+        })
+      });
+
+      const resetData = await resetRes.json().catch(() => ({}));
+
+      if (resetRes.ok) {
+        setStep('SUCCESS');
+      } else {
+        setError(resetData.detail || 'Failed to reset password. Please start over.');
+      }
+    } catch {
+      setError('Connection error occurred while updating your password.');
     } finally {
       setLoading(false);
     }
@@ -79,8 +155,8 @@ export const ForgotPassword: React.FC<ForgotPasswordProps> = ({ onNavigateLogin 
           </div>
           <h1 className="text-xl font-bold text-slate-900">OTP Password Reset</h1>
           <p className="text-xs text-slate-500 mt-1">
-            {step === 'REQUEST' && 'Enter your verified account email to receive a reset OTP.'}
-            {step === 'VERIFY' && 'Enter the 6-digit one-time password and your new credentials.'}
+            {step === 'REQUEST' && 'Enter your verified account email to receive a 6-digit reset code.'}
+            {step === 'VERIFY' && 'Enter the 6-digit code received via email and your new password.'}
             {step === 'SUCCESS' && 'Your credentials have been securely updated.'}
           </p>
         </div>
@@ -89,6 +165,13 @@ export const ForgotPassword: React.FC<ForgotPasswordProps> = ({ onNavigateLogin 
           <div className="mb-4 p-3 bg-rose-50 border border-rose-200 text-rose-700 rounded-lg text-xs flex items-center gap-2">
             <AlertCircle className="w-4 h-4 shrink-0 text-rose-500" />
             <span>{error}</span>
+          </div>
+        )}
+
+        {infoMessage && step === 'VERIFY' && !error && (
+          <div className="mb-4 p-3 bg-amber-50/80 border border-amber-200 text-amber-800 rounded-lg text-xs flex items-center gap-2">
+            <Mail className="w-4 h-4 shrink-0 text-amber-600" />
+            <span>{infoMessage}</span>
           </div>
         )}
 
@@ -101,6 +184,7 @@ export const ForgotPassword: React.FC<ForgotPasswordProps> = ({ onNavigateLogin 
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
+                placeholder="name@company.com"
                 className="w-full px-3.5 py-2 text-xs border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500"
               />
             </div>
@@ -108,29 +192,41 @@ export const ForgotPassword: React.FC<ForgotPasswordProps> = ({ onNavigateLogin 
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-2.5 px-4 bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold rounded-lg shadow-sm transition-all"
+              className="w-full py-2.5 px-4 bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold rounded-lg shadow-sm transition-all disabled:opacity-60"
             >
-              {loading ? 'Generating OTP...' : 'Send Reset OTP Code'}
+              {loading ? 'Sending Code...' : 'Send Reset OTP Code'}
             </button>
           </form>
         )}
 
         {step === 'VERIFY' && (
           <form onSubmit={handleResetPassword} className="space-y-4">
-            <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-800">
-              <span className="font-bold">Demo OTP Dispatched:</span>{' '}
-              <span className="font-mono font-bold tracking-widest text-amber-900">{demoGeneratedOtp}</span>
+            <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-700 flex items-center justify-between">
+              <span className="truncate">
+                Sent to: <strong className="font-semibold text-slate-900">{email}</strong>
+              </span>
+              <button
+                type="button"
+                onClick={() => { setStep('REQUEST'); setError(null); setInfoMessage(null); }}
+                className="text-amber-600 hover:text-amber-800 underline text-[11px] shrink-0 ml-2"
+              >
+                Change
+              </button>
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">6-Digit OTP Code</label>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">6-Digit Verification Code</label>
               <input
                 type="text"
-                value={otp}
-                onChange={(e) => setOtp(e.target.value)}
+                inputMode="numeric"
+                pattern="[0-9]*"
                 maxLength={6}
+                value={otp}
+                onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
+                placeholder="••••••"
                 required
-                className="w-full text-center font-mono tracking-widest text-lg py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500"
+                autoFocus
+                className="w-full text-center font-mono tracking-widest text-xl py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500"
               />
             </div>
 
@@ -142,17 +238,40 @@ export const ForgotPassword: React.FC<ForgotPasswordProps> = ({ onNavigateLogin 
                 onChange={(e) => setNewPassword(e.target.value)}
                 required
                 minLength={6}
-                placeholder="Enter strong password"
+                placeholder="Enter at least 6 characters"
                 className="w-full px-3.5 py-2 text-xs border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500"
               />
+            </div>
+
+            <div className="flex items-center justify-between text-xs text-slate-500 pt-1">
+              <span>Didn't receive code?</span>
+              <button
+                type="button"
+                onClick={handleResendOtp}
+                disabled={cooldown > 0 || resending}
+                className={`inline-flex items-center gap-1 font-semibold transition-colors ${
+                  cooldown > 0 || resending
+                    ? 'text-slate-400 cursor-not-allowed'
+                    : 'text-amber-600 hover:text-amber-700 underline'
+                }`}
+              >
+                {resending && <RefreshCw className="w-3 h-3 animate-spin" />}
+                <span>
+                  {resending
+                    ? 'Sending...'
+                    : cooldown > 0
+                    ? `Resend in ${cooldown}s`
+                    : 'Resend Code'}
+                </span>
+              </button>
             </div>
 
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-2.5 px-4 bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold rounded-lg shadow-sm transition-all"
+              className="w-full py-2.5 px-4 bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold rounded-lg shadow-sm transition-all disabled:opacity-60"
             >
-              {loading ? 'Updating Password...' : 'Verify OTP & Reset Password'}
+              {loading ? 'Verifying & Updating...' : 'Verify OTP & Reset Password'}
             </button>
           </form>
         )}

@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from app.api.deps import get_db, get_current_user
 from app.models.receipt import Receipt, ReceiptItem
 from app.models.warehouse import Location, Warehouse
@@ -43,7 +43,11 @@ def build_receipt_out(rec: Receipt) -> ReceiptOut:
 
 @router.get("", response_model=List[ReceiptOut])
 def list_receipts(status_filter: Optional[str] = None, db: Session = Depends(get_db)):
-    query = db.query(Receipt)
+    query = db.query(Receipt).options(
+        joinedload(Receipt.responsible_user),
+        joinedload(Receipt.items).joinedload(ReceiptItem.product),
+        joinedload(Receipt.items).joinedload(ReceiptItem.location)
+    )
     if status_filter:
         query = query.filter(Receipt.status == status_filter.upper())
     receipts = query.order_by(Receipt.created_at.desc()).all()
@@ -52,7 +56,11 @@ def list_receipts(status_filter: Optional[str] = None, db: Session = Depends(get
 
 @router.get("/{receipt_id}", response_model=ReceiptOut)
 def get_receipt(receipt_id: int, db: Session = Depends(get_db)):
-    receipt = db.query(Receipt).filter(Receipt.id == receipt_id).first()
+    receipt = db.query(Receipt).options(
+        joinedload(Receipt.responsible_user),
+        joinedload(Receipt.items).joinedload(ReceiptItem.product),
+        joinedload(Receipt.items).joinedload(ReceiptItem.location)
+    ).filter(Receipt.id == receipt_id).first()
     if not receipt:
         raise HTTPException(status_code=404, detail="Receipt not found")
     return build_receipt_out(receipt)

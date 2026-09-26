@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from app.api.deps import get_db, get_current_user
 from app.models.delivery import Delivery, DeliveryItem
 from app.models.warehouse import Location, Warehouse
@@ -44,7 +44,11 @@ def build_delivery_out(deliv: Delivery) -> DeliveryOut:
 
 @router.get("", response_model=List[DeliveryOut])
 def list_deliveries(status_filter: Optional[str] = None, db: Session = Depends(get_db)):
-    query = db.query(Delivery)
+    query = db.query(Delivery).options(
+        joinedload(Delivery.responsible_user),
+        joinedload(Delivery.items).joinedload(DeliveryItem.product),
+        joinedload(Delivery.items).joinedload(DeliveryItem.location)
+    )
     if status_filter:
         query = query.filter(Delivery.status == status_filter.upper())
     deliveries = query.order_by(Delivery.created_at.desc()).all()
@@ -53,7 +57,11 @@ def list_deliveries(status_filter: Optional[str] = None, db: Session = Depends(g
 
 @router.get("/{delivery_id}", response_model=DeliveryOut)
 def get_delivery(delivery_id: int, db: Session = Depends(get_db)):
-    delivery = db.query(Delivery).filter(Delivery.id == delivery_id).first()
+    delivery = db.query(Delivery).options(
+        joinedload(Delivery.responsible_user),
+        joinedload(Delivery.items).joinedload(DeliveryItem.product),
+        joinedload(Delivery.items).joinedload(DeliveryItem.location)
+    ).filter(Delivery.id == delivery_id).first()
     if not delivery:
         raise HTTPException(status_code=404, detail="Delivery order not found")
     return build_delivery_out(delivery)

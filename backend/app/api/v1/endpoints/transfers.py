@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from app.api.deps import get_db, get_current_user
 from app.models.transfer import InternalTransfer, TransferItem
 from app.models.user import User
@@ -39,7 +39,11 @@ def build_transfer_out(trf: InternalTransfer) -> TransferOut:
 
 @router.get("", response_model=List[TransferOut])
 def list_transfers(status_filter: Optional[str] = None, db: Session = Depends(get_db)):
-    query = db.query(InternalTransfer)
+    query = db.query(InternalTransfer).options(
+        joinedload(InternalTransfer.source_location),
+        joinedload(InternalTransfer.dest_location),
+        joinedload(InternalTransfer.items).joinedload(TransferItem.product)
+    )
     if status_filter:
         query = query.filter(InternalTransfer.status == status_filter.upper())
     transfers = query.order_by(InternalTransfer.created_at.desc()).all()

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { Boxes, ArrowRight, ShieldCheck, Zap, AlertCircle } from 'lucide-react';
+import { Boxes, ArrowRight, AlertCircle } from 'lucide-react';
 
 interface LoginProps {
   onNavigateSignUp: () => void;
@@ -8,9 +8,9 @@ interface LoginProps {
 }
 
 export const Login: React.FC<LoginProps> = ({ onNavigateSignUp, onNavigateForgotPassword }) => {
-  const { login, demoLogin, demoLoginStaff } = useAuth();
-  const [email, setEmail] = useState('admin@stocksense.io');
-  const [password, setPassword] = useState('admin123');
+  const { login } = useAuth();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -22,24 +22,6 @@ export const Login: React.FC<LoginProps> = ({ onNavigateSignUp, onNavigateForgot
     if (!success) {
       setError('Invalid credentials. Please check your email and password.');
     }
-    setLoading(false);
-  };
-
-  const handleDemoManager = async () => {
-    setLoading(true);
-    setError(null);
-    setEmail('admin@stocksense.io');
-    setPassword('admin123');
-    await demoLogin();
-    setLoading(false);
-  };
-
-  const handleDemoStaff = async () => {
-    setLoading(true);
-    setError(null);
-    setEmail('staff@stocksense.io');
-    setPassword('staff123');
-    await demoLoginStaff();
     setLoading(false);
   };
 
@@ -105,45 +87,11 @@ export const Login: React.FC<LoginProps> = ({ onNavigateSignUp, onNavigateForgot
           </button>
         </form>
 
-        <div className="relative my-6">
-          <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-slate-100" /></div>
-          <div className="relative flex justify-center text-[10px] uppercase text-slate-400 font-semibold bg-white px-2">
-            Instant Demo RBAC Access
-          </div>
-        </div>
-
-        <div className="grid grid-cols-2 gap-2">
-          <button
-            type="button"
-            disabled={loading}
-            onClick={handleDemoManager}
-            className="flex items-center justify-center gap-1.5 py-2 px-3 bg-indigo-50 hover:bg-indigo-100 text-indigo-900 text-xs font-medium rounded-lg transition-colors border border-indigo-200/80 disabled:opacity-50 cursor-pointer"
-          >
-            <Zap className="w-3.5 h-3.5 text-indigo-600" />
-            <span>Inventory Manager</span>
-          </button>
-
-          <button
-            type="button"
-            disabled={loading}
-            onClick={handleDemoStaff}
-            className="flex items-center justify-center gap-1.5 py-2 px-3 bg-cyan-50 hover:bg-cyan-100 text-cyan-900 text-xs font-medium rounded-lg transition-colors border border-cyan-200/80 disabled:opacity-50 cursor-pointer"
-          >
-            <Zap className="w-3.5 h-3.5 text-cyan-600" />
-            <span>Warehouse Staff</span>
-          </button>
-        </div>
-
         <div className="mt-6 text-center text-xs text-slate-500">
           Don't have an account?{' '}
           <button onClick={onNavigateSignUp} className="font-semibold text-brand-600 hover:underline">
             Create an Account
           </button>
-        </div>
-
-        <div className="mt-6 pt-4 border-t border-slate-100 flex items-center justify-center gap-2 text-[11px] text-slate-400">
-          <ShieldCheck className="w-3.5 h-3.5 text-brand-600" />
-          <span>Secured by Supabase Auth & JWT</span>
         </div>
       </div>
     </div>

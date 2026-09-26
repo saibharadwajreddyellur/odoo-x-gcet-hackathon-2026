@@ -9,9 +9,10 @@ import { FilterBar } from '../components/dashboard/FilterBar';
 import { OperationsOverview } from '../components/dashboard/OperationsOverview';
 import { OperationsTable } from '../components/dashboard/OperationsTable';
 import { NavTab } from '../components/common/Sidebar';
+import { useAuth } from '../context/AuthContext';
 import {
   Boxes, AlertTriangle, XCircle, Truck, Send, ArrowLeftRight,
-  Plus, Clock, AlertCircle
+  Plus, Clock, AlertCircle, SlidersHorizontal
 } from 'lucide-react';
 
 interface DashboardProps {
@@ -20,6 +21,7 @@ interface DashboardProps {
 }
 
 export const Dashboard: React.FC<DashboardProps> = ({ onNavigateTab, onQuickReceipt }) => {
+  const { isManager } = useAuth();
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
@@ -92,9 +94,13 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigateTab, onQuickRece
       {/* Top Banner & Quick Action Buttons */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-white p-5 rounded-xl border border-slate-200/80 shadow-sm">
         <div>
-          <h2 className="text-xl font-bold text-slate-900 tracking-tight">Executive Stock Overview</h2>
+          <h2 className="text-xl font-bold text-slate-900 tracking-tight">
+            {isManager ? 'Executive Stock Overview' : 'Operations Dashboard'}
+          </h2>
           <p className="text-xs text-slate-500 mt-0.5">
-            Real-time inventory registry, dynamic operational pipeline & warehouse metrics
+            {isManager
+              ? 'Real-time inventory registry, dynamic operational pipeline & warehouse metrics'
+              : 'Warehouse floor operations, transfers, deliveries, shelving and counts'}
           </p>
         </div>
 
@@ -119,15 +125,25 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigateTab, onQuickRece
             className="inline-flex items-center gap-1.5 px-3 py-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 text-xs font-medium rounded-lg shadow-sm transition-all"
           >
             <ArrowLeftRight className="w-3.5 h-3.5 text-slate-500" />
-            <span>Transfer Stock</span>
+            <span>Internal Transfer</span>
           </button>
-          <button
-            onClick={() => onNavigateTab('products')}
-            className="inline-flex items-center gap-1.5 px-3 py-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 text-xs font-medium rounded-lg shadow-sm transition-all"
-          >
-            <Plus className="w-3.5 h-3.5 text-slate-500" />
-            <span>Add Product</span>
-          </button>
+          {isManager ? (
+            <button
+              onClick={() => onNavigateTab('products')}
+              className="inline-flex items-center gap-1.5 px-3 py-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 text-xs font-medium rounded-lg shadow-sm transition-all"
+            >
+              <Plus className="w-3.5 h-3.5 text-slate-500" />
+              <span>Add Product</span>
+            </button>
+          ) : (
+            <button
+              onClick={() => onNavigateTab('adjustments')}
+              className="inline-flex items-center gap-1.5 px-3 py-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 text-xs font-medium rounded-lg shadow-sm transition-all"
+            >
+              <SlidersHorizontal className="w-3.5 h-3.5 text-slate-500" />
+              <span>Stock Adjustment</span>
+            </button>
+          )}
         </div>
       </div>
 

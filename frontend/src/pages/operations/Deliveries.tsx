@@ -151,9 +151,23 @@ export const Deliveries: React.FC = () => {
     }
   };
 
-  /** Cancel: allowed from DRAFT, WAITING, or READY */
+  /** Cancel: allowed from DRAFT, WAITING, or READY with confirmation */
   const handleCancelDelivery = async (id: number) => {
-    if (!window.confirm('Cancel this delivery order? This cannot be undone.')) return;
+    const target = deliveries.find(d => d.id === id);
+    if (!target) return;
+    if (target.status === 'DONE') {
+      setErrorMsg('Cannot cancel a completed delivery — stock has already been deducted.');
+      return;
+    }
+    if (target.status === 'CANCELLED') {
+      setErrorMsg('Delivery order is already cancelled.');
+      return;
+    }
+    const confirmed = window.confirm(
+      `Are you sure you want to cancel delivery order ${target.delivery_number}? This cannot be undone.`
+    );
+    if (!confirmed) return;
+
     setProcessingId(id);
     setErrorMsg(null);
     try {
@@ -270,6 +284,14 @@ export const Deliveries: React.FC = () => {
             {selectedDelivery.status === 'DRAFT' && (
               <>
                 <button
+                  onClick={() => handleCancelDelivery(selectedDelivery.id)}
+                  disabled={processingId === selectedDelivery.id}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-lg text-xs font-semibold transition-all disabled:opacity-60 shadow-xs"
+                >
+                  <XCircle className="w-4 h-4 text-rose-600" />
+                  <span>Cancel Delivery</span>
+                </button>
+                <button
                   onClick={() => handleCheckAvailability(selectedDelivery.id)}
                   disabled={processingId === selectedDelivery.id}
                   className="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg text-xs shadow-sm transition-all disabled:opacity-60"
@@ -277,19 +299,19 @@ export const Deliveries: React.FC = () => {
                   <PackageCheck className="w-4 h-4" />
                   <span>{processingId === selectedDelivery.id ? 'Checking...' : 'Check Availability'}</span>
                 </button>
-                <button
-                  onClick={() => handleCancelDelivery(selectedDelivery.id)}
-                  disabled={processingId === selectedDelivery.id}
-                  className="inline-flex items-center gap-1.5 px-3 py-2 text-slate-600 hover:text-rose-600 hover:bg-rose-50 border border-slate-200 rounded-lg text-xs transition-colors disabled:opacity-60"
-                >
-                  <XCircle className="w-4 h-4" />
-                  <span>Cancel Order</span>
-                </button>
               </>
             )}
 
             {selectedDelivery.status === 'WAITING' && (
               <>
+                <button
+                  onClick={() => handleCancelDelivery(selectedDelivery.id)}
+                  disabled={processingId === selectedDelivery.id}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-lg text-xs font-semibold transition-all disabled:opacity-60 shadow-xs"
+                >
+                  <XCircle className="w-4 h-4 text-rose-600" />
+                  <span>Cancel Delivery</span>
+                </button>
                 <button
                   onClick={() => handleMarkReady(selectedDelivery.id)}
                   disabled={processingId === selectedDelivery.id}
@@ -298,19 +320,19 @@ export const Deliveries: React.FC = () => {
                   <PackageCheck className="w-4 h-4" />
                   <span>{processingId === selectedDelivery.id ? 'Rechecking...' : 'Recheck Stock & Mark Ready'}</span>
                 </button>
-                <button
-                  onClick={() => handleCancelDelivery(selectedDelivery.id)}
-                  disabled={processingId === selectedDelivery.id}
-                  className="inline-flex items-center gap-1.5 px-3 py-2 text-slate-600 hover:text-rose-600 hover:bg-rose-50 border border-slate-200 rounded-lg text-xs transition-colors disabled:opacity-60"
-                >
-                  <XCircle className="w-4 h-4" />
-                  <span>Cancel Order</span>
-                </button>
               </>
             )}
 
             {selectedDelivery.status === 'READY' && (
               <>
+                <button
+                  onClick={() => handleCancelDelivery(selectedDelivery.id)}
+                  disabled={processingId === selectedDelivery.id}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-lg text-xs font-semibold transition-all disabled:opacity-60 shadow-xs"
+                >
+                  <XCircle className="w-4 h-4 text-rose-600" />
+                  <span>Cancel Delivery</span>
+                </button>
                 <button
                   onClick={() => handleValidateDelivery(selectedDelivery.id)}
                   disabled={processingId === selectedDelivery.id}
@@ -318,14 +340,6 @@ export const Deliveries: React.FC = () => {
                 >
                   <CheckCircle className="w-4 h-4" />
                   <span>{processingId === selectedDelivery.id ? 'Validating...' : 'Validate & Dispatch'}</span>
-                </button>
-                <button
-                  onClick={() => handleCancelDelivery(selectedDelivery.id)}
-                  disabled={processingId === selectedDelivery.id}
-                  className="inline-flex items-center gap-1.5 px-3 py-2 text-slate-600 hover:text-rose-600 hover:bg-rose-50 border border-slate-200 rounded-lg text-xs transition-colors disabled:opacity-60"
-                >
-                  <XCircle className="w-4 h-4" />
-                  <span>Cancel Order</span>
                 </button>
               </>
             )}
@@ -338,6 +352,13 @@ export const Deliveries: React.FC = () => {
                 <Printer className="w-4 h-4" />
                 <span>Print Delivery Slip</span>
               </button>
+            )}
+
+            {selectedDelivery.status === 'CANCELLED' && (
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-rose-50 text-rose-700 rounded-lg text-xs font-semibold border border-rose-200">
+                <XCircle className="w-3.5 h-3.5" />
+                <span>Delivery Order Cancelled</span>
+              </span>
             )}
           </div>
         </div>
@@ -625,6 +646,17 @@ export const Deliveries: React.FC = () => {
                       </td>
                       <td className="py-3.5 px-4 text-center">
                         <div className="flex items-center justify-center gap-1.5">
+                          {deliv.status !== 'DONE' && deliv.status !== 'CANCELLED' && (
+                            <button
+                              onClick={() => handleCancelDelivery(deliv.id)}
+                              disabled={processingId === deliv.id}
+                              className="px-2.5 py-1 text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded text-[11px] font-semibold transition-all disabled:opacity-60 inline-flex items-center gap-1"
+                              title="Cancel Delivery Order"
+                            >
+                              <XCircle className="w-3 h-3 text-rose-600" />
+                              <span>Cancel</span>
+                            </button>
+                          )}
                           {deliv.status === 'DRAFT' && (
                             <button
                               onClick={() => handleCheckAvailability(deliv.id)}
@@ -679,136 +711,157 @@ export const Deliveries: React.FC = () => {
         </div>
       ) : (
         /* KANBAN VIEW */
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-3.5">
-          {(['DRAFT', 'WAITING', 'READY', 'DONE', 'CANCELLED'] as const).map((colStatus) => {
-            const colDeliveries = filteredDeliveries.filter(d => d.status === colStatus);
-            const colLabels = {
-              DRAFT: 'Draft',
-              WAITING: 'Waiting Stock',
-              READY: 'Ready to Deliver',
-              DONE: 'Delivered (Done)',
-              CANCELLED: 'Canceled'
-            };
+        <div className="w-full overflow-x-auto pb-6 pt-1">
+          <div className="flex gap-4 items-start min-w-max">
+            {(['DRAFT', 'WAITING', 'READY', 'DONE', 'CANCELLED'] as const).map((colStatus) => {
+              const colDeliveries = filteredDeliveries.filter(d => d.status === colStatus);
+              const colLabels = {
+                DRAFT: 'Draft',
+                WAITING: 'Waiting Stock',
+                READY: 'Ready to Deliver',
+                DONE: 'Delivered (Done)',
+                CANCELLED: 'Canceled'
+              };
 
-            return (
-              <div key={colStatus} className="bg-slate-50/80 rounded-xl border border-slate-200 p-3.5 flex flex-col space-y-3">
-                <div className="flex items-center justify-between border-b border-slate-200/80 pb-2.5">
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-[11px] font-bold text-slate-800 uppercase tracking-wide">
-                      {colLabels[colStatus]}
-                    </span>
-                    <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-white text-slate-700 border border-slate-200 shadow-xs">
-                      {colDeliveries.length}
-                    </span>
+              return (
+                <div
+                  key={colStatus}
+                  className="w-[280px] min-w-[280px] shrink-0 bg-slate-50/80 rounded-xl border border-slate-200 p-3.5 flex flex-col space-y-3"
+                >
+                  <div className="flex items-center justify-between border-b border-slate-200/80 pb-2.5">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[11px] font-bold text-slate-800 uppercase tracking-wide">
+                        {colLabels[colStatus]}
+                      </span>
+                      <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-white text-slate-700 border border-slate-200 shadow-xs">
+                        {colDeliveries.length}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    {colDeliveries.length === 0 ? (
+                      <div className="p-4 text-center text-[11px] text-slate-400 italic">
+                        No {colLabels[colStatus].toLowerCase()} orders
+                      </div>
+                    ) : (
+                      colDeliveries.map((deliv) => {
+                        const late = isLate(deliv);
+                        const totalUnits = deliv.items.reduce((s, it) => s + it.quantity, 0);
+
+                        return (
+                          <div
+                            key={deliv.id}
+                            className="bg-white rounded-xl border border-slate-200/90 p-3.5 shadow-xs hover:shadow-sm transition-shadow space-y-2.5"
+                          >
+                            <div className="flex items-start justify-between gap-1">
+                              <button
+                                onClick={() => setSelectedDeliveryId(deliv.id)}
+                                className="font-mono text-xs font-bold text-slate-900 hover:text-brand-600 hover:underline text-left"
+                              >
+                                {deliv.delivery_number}
+                              </button>
+                              <Badge status={deliv.status} />
+                            </div>
+
+                            <div>
+                              <span className="text-[10px] text-slate-400 uppercase font-semibold block">Customer</span>
+                              <span className="text-xs font-bold text-slate-800 line-clamp-1">{deliv.customer_name}</span>
+                            </div>
+
+                            <div className="text-[11px] text-slate-500 space-y-1 pt-1 border-t border-slate-100">
+                              <div className="flex items-center justify-between">
+                                <span className="flex items-center gap-1">
+                                  <Calendar className="w-3 h-3 text-slate-400" />
+                                  <span>{formatDate(deliv.scheduled_date)}</span>
+                                </span>
+                                {late && (
+                                  <span className="inline-flex items-center gap-0.5 px-1 py-0.5 rounded text-[10px] font-bold bg-rose-100 text-rose-700">
+                                    <Clock className="w-2.5 h-2.5" />
+                                    <span>LATE</span>
+                                  </span>
+                                )}
+                              </div>
+                              <div className="flex items-center justify-between text-slate-600">
+                                <span className="truncate max-w-[130px]" title={deliv.responsible_user_name || 'Staff'}>
+                                  Resp: {deliv.responsible_user_name || 'Staff'}
+                                </span>
+                                <strong className="text-slate-900 shrink-0">{totalUnits} units</strong>
+                              </div>
+                            </div>
+
+                            <div className="pt-2 border-t border-slate-100 flex items-center justify-between gap-1.5">
+                              <button
+                                onClick={() => setSelectedDeliveryId(deliv.id)}
+                                className="text-[11px] font-semibold text-slate-600 hover:text-slate-900 inline-flex items-center gap-1"
+                              >
+                                <Eye className="w-3 h-3" />
+                                <span>Details</span>
+                              </button>
+
+                              <div className="flex items-center gap-1.5">
+                                {deliv.status !== 'DONE' && deliv.status !== 'CANCELLED' && (
+                                  <button
+                                    onClick={() => handleCancelDelivery(deliv.id)}
+                                    disabled={processingId === deliv.id}
+                                    className="px-2.5 py-1 text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded text-[11px] font-semibold transition-all disabled:opacity-60 inline-flex items-center gap-1"
+                                    title="Cancel Delivery Order"
+                                  >
+                                    <XCircle className="w-3 h-3 text-rose-600" />
+                                    <span>Cancel</span>
+                                  </button>
+                                )}
+
+                                {deliv.status === 'DRAFT' && (
+                                  <button
+                                    onClick={() => handleCheckAvailability(deliv.id)}
+                                    disabled={processingId === deliv.id}
+                                    className="px-2 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded text-[11px] font-semibold transition-all disabled:opacity-60"
+                                  >
+                                    Check
+                                  </button>
+                                )}
+
+                                {deliv.status === 'WAITING' && (
+                                  <button
+                                    onClick={() => handleMarkReady(deliv.id)}
+                                    disabled={processingId === deliv.id}
+                                    className="px-2 py-1 bg-amber-600 hover:bg-amber-700 text-white rounded text-[11px] font-semibold transition-all disabled:opacity-60"
+                                  >
+                                    Ready
+                                  </button>
+                                )}
+
+                                {deliv.status === 'READY' && (
+                                  <button
+                                    onClick={() => handleValidateDelivery(deliv.id)}
+                                    disabled={processingId === deliv.id}
+                                    className="px-2 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-[11px] font-semibold transition-all disabled:opacity-60"
+                                  >
+                                    Validate
+                                  </button>
+                                )}
+
+                                {deliv.status === 'DONE' && (
+                                  <button
+                                    onClick={() => setPrintDelivery(deliv)}
+                                    className="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded text-[11px] font-medium transition-all inline-flex items-center gap-1"
+                                  >
+                                    <Printer className="w-3 h-3" />
+                                    <span>Print</span>
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })
+                    )}
                   </div>
                 </div>
-
-                <div className="space-y-3 overflow-y-auto max-h-[700px] pr-1">
-                  {colDeliveries.length === 0 ? (
-                    <div className="p-4 text-center text-[11px] text-slate-400 italic">
-                      No {colLabels[colStatus].toLowerCase()} orders
-                    </div>
-                  ) : (
-                    colDeliveries.map((deliv) => {
-                      const late = isLate(deliv);
-                      const totalUnits = deliv.items.reduce((s, it) => s + it.quantity, 0);
-
-                      return (
-                        <div
-                          key={deliv.id}
-                          className="bg-white rounded-xl border border-slate-200/90 p-3.5 shadow-xs hover:shadow-sm transition-shadow space-y-2.5"
-                        >
-                          <div className="flex items-start justify-between gap-1">
-                            <button
-                              onClick={() => setSelectedDeliveryId(deliv.id)}
-                              className="font-mono text-xs font-bold text-slate-900 hover:text-brand-600 hover:underline text-left"
-                            >
-                              {deliv.delivery_number}
-                            </button>
-                            <Badge status={deliv.status} />
-                          </div>
-
-                          <div>
-                            <span className="text-[10px] text-slate-400 uppercase font-semibold block">Customer</span>
-                            <span className="text-xs font-bold text-slate-800 line-clamp-1">{deliv.customer_name}</span>
-                          </div>
-
-                          <div className="text-[11px] text-slate-500 space-y-1 pt-1 border-t border-slate-100">
-                            <div className="flex items-center justify-between">
-                              <span className="flex items-center gap-1">
-                                <Calendar className="w-3 h-3 text-slate-400" />
-                                <span>{formatDate(deliv.scheduled_date)}</span>
-                              </span>
-                              {late && (
-                                <span className="inline-flex items-center gap-0.5 px-1 py-0.5 rounded text-[10px] font-bold bg-rose-100 text-rose-700">
-                                  <Clock className="w-2.5 h-2.5" />
-                                  <span>LATE</span>
-                                </span>
-                              )}
-                            </div>
-                            <div className="flex items-center justify-between text-slate-600">
-                              <span>Resp: {deliv.responsible_user_name || 'Staff'}</span>
-                              <strong className="text-slate-900">{totalUnits} units</strong>
-                            </div>
-                          </div>
-
-                          <div className="pt-2 border-t border-slate-100 flex items-center justify-between gap-1.5">
-                            <button
-                              onClick={() => setSelectedDeliveryId(deliv.id)}
-                              className="text-[11px] font-semibold text-slate-600 hover:text-slate-900 inline-flex items-center gap-1"
-                            >
-                              <Eye className="w-3 h-3" />
-                              <span>Details</span>
-                            </button>
-
-                            {deliv.status === 'DRAFT' && (
-                              <button
-                                onClick={() => handleCheckAvailability(deliv.id)}
-                                disabled={processingId === deliv.id}
-                                className="px-2 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded text-[11px] font-semibold transition-all disabled:opacity-60"
-                              >
-                                Check
-                              </button>
-                            )}
-
-                            {deliv.status === 'WAITING' && (
-                              <button
-                                onClick={() => handleMarkReady(deliv.id)}
-                                disabled={processingId === deliv.id}
-                                className="px-2 py-1 bg-amber-600 hover:bg-amber-700 text-white rounded text-[11px] font-semibold transition-all disabled:opacity-60"
-                              >
-                                Ready
-                              </button>
-                            )}
-
-                            {deliv.status === 'READY' && (
-                              <button
-                                onClick={() => handleValidateDelivery(deliv.id)}
-                                disabled={processingId === deliv.id}
-                                className="px-2 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-[11px] font-semibold transition-all disabled:opacity-60"
-                              >
-                                Validate
-                              </button>
-                            )}
-
-                            {deliv.status === 'DONE' && (
-                              <button
-                                onClick={() => setPrintDelivery(deliv)}
-                                className="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded text-[11px] font-medium transition-all inline-flex items-center gap-1"
-                              >
-                                <Printer className="w-3 h-3" />
-                                <span>Print</span>
-                              </button>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })
-                  )}
-                </div>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
       )}
 

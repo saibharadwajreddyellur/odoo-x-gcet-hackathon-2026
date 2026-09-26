@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import {
-  Boxes, Search, User as UserIcon, LogOut, ShieldCheck
+  Boxes, Search, User as UserIcon, LogOut
 } from 'lucide-react';
 
 interface NavbarProps {
@@ -79,15 +79,6 @@ export const Navbar: React.FC<NavbarProps> = ({ onSearchChange, onNavigateProfil
                   <p className="text-xs font-semibold text-slate-900">
                     {user?.full_name}
                   </p>
-
-                  <span
-                    className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${isManager
-                      ? 'bg-indigo-50 text-indigo-700 border border-indigo-200'
-                      : 'bg-cyan-50 text-cyan-700 border border-cyan-200'
-                      }`}
-                  >
-                    {isManager ? 'Manager' : 'Staff'}
-                  </span>
                 </div>
 
                 <p className="text-[11px] text-slate-500 truncate mt-0.5">
@@ -106,11 +97,6 @@ export const Navbar: React.FC<NavbarProps> = ({ onSearchChange, onNavigateProfil
                   <UserIcon className="w-4 h-4 text-slate-500" />
                   <span>My Profile</span>
                 </button>
-
-                <div className="flex items-center gap-2 px-3 py-2 text-xs text-slate-500">
-                  <ShieldCheck className="w-4 h-4 text-emerald-600" />
-                  <span>Backend JWT Active</span>
-                </div>
               </div>
 
               <div className="border-t border-slate-100 pt-1">

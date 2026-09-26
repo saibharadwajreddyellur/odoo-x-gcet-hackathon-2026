@@ -1,6 +1,6 @@
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from app.api.deps import get_db, get_current_user
 from app.models.adjustment import StockAdjustment
 from app.models.user import User
@@ -31,7 +31,10 @@ def build_adjustment_out(adj: StockAdjustment) -> AdjustmentOut:
 
 @router.get("", response_model=List[AdjustmentOut])
 def list_adjustments(db: Session = Depends(get_db)):
-    adjustments = db.query(StockAdjustment).order_by(StockAdjustment.created_at.desc()).all()
+    adjustments = db.query(StockAdjustment).options(
+        joinedload(StockAdjustment.product),
+        joinedload(StockAdjustment.location)
+    ).order_by(StockAdjustment.created_at.desc()).all()
     return [build_adjustment_out(a) for a in adjustments]
 
 

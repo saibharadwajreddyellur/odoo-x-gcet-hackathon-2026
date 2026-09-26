@@ -1,8 +1,9 @@
 from typing import List, Optional
 from fastapi import APIRouter, Depends, Query
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from app.api.deps import get_db
 from app.models.ledger import StockLedger
+from app.models.warehouse import Location
 from app.schemas.ledger import StockLedgerOut
 
 router = APIRouter()
@@ -21,7 +22,11 @@ def get_stock_ledger(
     """
     Query the immutable stock ledger with comprehensive filtering.
     """
-    query = db.query(StockLedger)
+    query = db.query(StockLedger).options(
+        joinedload(StockLedger.product),
+        joinedload(StockLedger.location).joinedload(Location.warehouse),
+        joinedload(StockLedger.user)
+    )
 
     if product_id:
         query = query.filter(StockLedger.product_id == product_id)

@@ -23,3 +23,77 @@
 ::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
 }
+
+/* Print Optimization for Business Documents (GRN, Delivery Slips, etc.) */
+@media print {
+  @page {
+    /* Setting margin: 0 on @page tells Chrome/Edge to omit default browser headers/footers (URL, title, timestamp) */
+    size: A4 portrait;
+    margin: 0;
+  }
+
+  /* Reset body and hide screen components */
+  html, body {
+    background: #ffffff !important;
+    color: #0f172a !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: 100% !important;
+    overflow: visible !important;
+    position: static !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* When printing from receipt/delivery modal, hide regular app entirely */
+  body.printing-document #root {
+    display: none !important;
+  }
+
+  /* When printing, hide all non-print elements */
+  .no-print,
+  .no-print * {
+    display: none !important;
+  }
+
+  /* Printable Portal Root */
+  #printable-document-portal {
+    display: block !important;
+    position: static !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #ffffff !important;
+    box-shadow: none !important;
+    border: none !important;
+    overflow: visible !important;
+  }
+
+  /* Printable Document Sheet */
+  #printable-a4-document {
+    display: block !important;
+    position: static !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    box-sizing: border-box !important;
+    padding: 12mm 15mm !important;
+    background: #ffffff !important;
+    box-shadow: none !important;
+    border: none !important;
+    border-radius: 0 !important;
+    overflow: visible !important;
+  }
+
+  /* Avoid page breaks within critical sections */
+  table, tr, td, th, .avoid-break {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+}
+
+
+
+

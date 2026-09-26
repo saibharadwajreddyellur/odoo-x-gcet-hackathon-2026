@@ -30,7 +30,7 @@ except Exception as e:
     connect_args = {"check_same_thread": False}
     engine = create_engine(db_url, connect_args=connect_args)
 
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, expire_on_commit=False, bind=engine)
 Base = declarative_base()
 
 

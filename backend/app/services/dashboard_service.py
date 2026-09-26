@@ -1,13 +1,13 @@
 from datetime import datetime, timedelta
 from typing import List, Optional, Set
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import func
 from app.models.product import Product, StockLevel
 from app.models.category import Category
 from app.models.warehouse import Warehouse, Location
-from app.models.receipt import Receipt
-from app.models.delivery import Delivery
-from app.models.transfer import InternalTransfer
+from app.models.receipt import Receipt, ReceiptItem
+from app.models.delivery import Delivery, DeliveryItem
+from app.models.transfer import InternalTransfer, TransferItem
 from app.models.adjustment import StockAdjustment
 from app.models.ledger import StockLedger
 from app.schemas.dashboard import (
@@ -37,7 +37,10 @@ def get_dashboard_summary(
         target_loc_ids = {loc.id for loc in locs}
 
     # 2. Products Query (respecting category filter)
-    prod_query = db.query(Product)
+    prod_query = db.query(Product).options(
+        joinedload(Product.category),
+        joinedload(Product.stock_levels).joinedload(StockLevel.location).joinedload(Location.warehouse)
+    )
     if category_id is not None:
         prod_query = prod_query.filter(Product.category_id == category_id)
     products = prod_query.all()
@@ -102,7 +105,10 @@ def get_dashboard_summary(
             low_stock_items.append(p_out)
 
     # 4. Receipts Processing
-    all_receipts = db.query(Receipt).order_by(Receipt.created_at.desc()).all()
+    all_receipts = db.query(Receipt).options(
+        joinedload(Receipt.items).joinedload(ReceiptItem.location).joinedload(Location.warehouse),
+        joinedload(Receipt.items).joinedload(ReceiptItem.product).joinedload(Product.category)
+    ).order_by(Receipt.created_at.desc()).all()
     receipts_total = 0
     receipts_to_receive = 0
     receipts_late = 0
@@ -157,7 +163,10 @@ def get_dashboard_summary(
         )
 
     # 5. Deliveries Processing
-    all_deliveries = db.query(Delivery).order_by(Delivery.created_at.desc()).all()
+    all_deliveries = db.query(Delivery).options(
+        joinedload(Delivery.items).joinedload(DeliveryItem.location).joinedload(Location.warehouse),
+        joinedload(Delivery.items).joinedload(DeliveryItem.product).joinedload(Product.category)
+    ).order_by(Delivery.created_at.desc()).all()
     deliveries_total = 0
     deliveries_to_deliver = 0
     deliveries_late = 0
@@ -213,7 +222,11 @@ def get_dashboard_summary(
         )
 
     # 6. Internal Transfers Processing
-    all_transfers = db.query(InternalTransfer).order_by(InternalTransfer.created_at.desc()).all()
+    all_transfers = db.query(InternalTransfer).options(
+        joinedload(InternalTransfer.source_location).joinedload(Location.warehouse),
+        joinedload(InternalTransfer.dest_location),
+        joinedload(InternalTransfer.items).joinedload(TransferItem.product).joinedload(Product.category)
+    ).order_by(InternalTransfer.created_at.desc()).all()
     transfers_total = 0
     transfers_to_process = 0
     transfers_late = 0
@@ -265,7 +278,10 @@ def get_dashboard_summary(
         )
 
     # 7. Stock Adjustments Processing
-    all_adjustments = db.query(StockAdjustment).order_by(StockAdjustment.created_at.desc()).all()
+    all_adjustments = db.query(StockAdjustment).options(
+        joinedload(StockAdjustment.location).joinedload(Location.warehouse),
+        joinedload(StockAdjustment.product).joinedload(Product.category)
+    ).order_by(StockAdjustment.created_at.desc()).all()
     adjustment_doc_items: List[DashboardDocumentItem] = []
 
     for adj in all_adjustments:
@@ -348,7 +364,9 @@ def get_dashboard_summary(
     ]
 
     # 10. Category Distribution (respecting warehouse filter)
-    all_categories = db.query(Category).all()
+    all_categories = db.query(Category).options(
+        joinedload(Category.products).joinedload(Product.stock_levels)
+    ).all()
     category_distribution: List[CategoryStock] = []
     for c in all_categories:
         c_prods = c.products
@@ -368,17 +386,14 @@ def get_dashboard_summary(
             )
         )
 
-    # 11. Real Movement Trends calculated from StockLedger (Last 7 days)
+    # 11. Real Movement Trends calculated from StockLedger (Last 7 days in 1 batch query)
+    seven_days_ago = datetime.combine((now - timedelta(days=6)).date(), datetime.min.time())
+    all_week_entries = db.query(StockLedger).filter(StockLedger.timestamp >= seven_days_ago).all()
+
     movement_trends: List[MovementTrend] = []
     for i in range(6, -1, -1):
         day_date = (now - timedelta(days=i)).date()
-        day_start = datetime.combine(day_date, datetime.min.time())
-        day_end = datetime.combine(day_date, datetime.max.time())
-
-        day_entries = db.query(StockLedger).filter(
-            StockLedger.timestamp >= day_start,
-            StockLedger.timestamp <= day_end
-        ).all()
+        day_entries = [e for e in all_week_entries if e.timestamp and e.timestamp.date() == day_date]
 
         r_cnt = sum(1 for e in day_entries if e.reference_doc_type == "Receipt")
         d_cnt = sum(1 for e in day_entries if e.reference_doc_type == "Delivery")
@@ -394,7 +409,11 @@ def get_dashboard_summary(
         )
 
     # 12. Recent movements from StockLedger
-    recent_ledger_q = db.query(StockLedger).order_by(StockLedger.timestamp.desc())
+    recent_ledger_q = db.query(StockLedger).options(
+        joinedload(StockLedger.product),
+        joinedload(StockLedger.location).joinedload(Location.warehouse),
+        joinedload(StockLedger.user)
+    ).order_by(StockLedger.timestamp.desc())
     if target_loc_ids is not None:
         recent_ledger_q = recent_ledger_q.filter(StockLedger.location_id.in_(target_loc_ids))
     recent_ledger = recent_ledger_q.limit(10).all()

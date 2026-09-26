@@ -43,6 +43,51 @@ const getAuthHeaders = () => {
   };
 };
 
+export const isNetworkOrTimeoutError = (e: any): boolean => {
+  if (!e) return false;
+  const name = e.name || '';
+  const msg = typeof e.message === 'string' ? e.message : '';
+  return (
+    name === 'TimeoutError' ||
+    name === 'AbortError' ||
+    msg.includes('Failed to fetch') ||
+    msg.includes('fetch failed') ||
+    msg.includes('timed out') ||
+    msg.includes('aborted') ||
+    msg.includes('NetworkError') ||
+    msg.includes('network error')
+  );
+};
+
+const DEFAULT_TIMEOUT_MS = 10000;
+
+async function apiFetch(
+  url: string,
+  options: RequestInit & { timeoutMs?: number } = {}
+): Promise<Response> {
+  const { timeoutMs = DEFAULT_TIMEOUT_MS, ...fetchOptions } = options;
+  const controller = new AbortController();
+  const timer = setTimeout(() => {
+    controller.abort(new DOMException('Request timed out', 'TimeoutError'));
+  }, timeoutMs);
+
+  try {
+    const res = await fetch(url, {
+      ...fetchOptions,
+      headers: {
+        ...getAuthHeaders(),
+        ...(fetchOptions.headers || {})
+      },
+      signal: controller.signal
+    });
+    clearTimeout(timer);
+    return res;
+  } catch (err: any) {
+    clearTimeout(timer);
+    throw err;
+  }
+}
+
 export const api = {
   // --- Dashboard ---
   async getDashboardSummary(params?: {
@@ -61,10 +106,7 @@ export const api = {
     const qs = queryParts.length > 0 ? `?${queryParts.join('&')}` : '';
 
     try {
-      const res = await fetch(`${API_BASE_URL}/dashboard/summary${qs}`, {
-        headers: getAuthHeaders(),
-        signal: AbortSignal.timeout(8000)
-      });
+      const res = await apiFetch(`${API_BASE_URL}/dashboard/summary${qs}`);
       if (res.ok) return await res.json();
     } catch {
       // Fallback
@@ -108,10 +150,7 @@ export const api = {
   // --- Products & Categories ---
   async getProducts(): Promise<Product[]> {
     try {
-      const res = await fetch(`${API_BASE_URL}/products`, {
-        headers: getAuthHeaders(),
-        signal: AbortSignal.timeout(1500)
-      });
+      const res = await apiFetch(`${API_BASE_URL}/products`);
       if (res.ok) return await res.json();
     } catch { }
     return mockStore.products;
@@ -119,11 +158,9 @@ export const api = {
 
   async createProduct(productData: any): Promise<Product> {
     try {
-      const res = await fetch(`${API_BASE_URL}/products`, {
+      const res = await apiFetch(`${API_BASE_URL}/products`, {
         method: 'POST',
-        headers: getAuthHeaders(),
-        body: JSON.stringify(productData),
-        signal: AbortSignal.timeout(2000)
+        body: JSON.stringify(productData)
       });
       if (res.ok) return await res.json();
     } catch { }
@@ -184,10 +221,7 @@ export const api = {
 
   async getCategories(): Promise<Category[]> {
     try {
-      const res = await fetch(`${API_BASE_URL}/products/categories`, {
-        headers: getAuthHeaders(),
-        signal: AbortSignal.timeout(1500)
-      });
+      const res = await apiFetch(`${API_BASE_URL}/products/categories`);
       if (res.ok) return await res.json();
     } catch { }
     return mockStore.categories;
@@ -196,21 +230,16 @@ export const api = {
   // --- Warehouses & Locations ---
   async getWarehouses(): Promise<Warehouse[]> {
     try {
-      const res = await fetch(`${API_BASE_URL}/warehouses`, {
-        headers: getAuthHeaders(),
-        signal: AbortSignal.timeout(8000)
-      });
+      const res = await apiFetch(`${API_BASE_URL}/warehouses`);
       if (res.ok) return await res.json();
     } catch { }
     return mockStore.warehouses;
   },
 
   async createWarehouse(data: { name: string; code: string; address?: string }): Promise<Warehouse> {
-    const res = await fetch(`${API_BASE_URL}/warehouses`, {
+    const res = await apiFetch(`${API_BASE_URL}/warehouses`, {
       method: 'POST',
-      headers: getAuthHeaders(),
-      body: JSON.stringify(data),
-      signal: AbortSignal.timeout(8000)
+      body: JSON.stringify(data)
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({ detail: 'Failed to create warehouse' }));
@@ -220,11 +249,9 @@ export const api = {
   },
 
   async updateWarehouse(id: number, data: { name?: string; code?: string; address?: string }): Promise<Warehouse> {
-    const res = await fetch(`${API_BASE_URL}/warehouses/${id}`, {
+    const res = await apiFetch(`${API_BASE_URL}/warehouses/${id}`, {
       method: 'PUT',
-      headers: getAuthHeaders(),
-      body: JSON.stringify(data),
-      signal: AbortSignal.timeout(8000)
+      body: JSON.stringify(data)
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({ detail: 'Failed to update warehouse' }));
@@ -236,10 +263,7 @@ export const api = {
   async getLocations(warehouseId?: number): Promise<Location[]> {
     const url = warehouseId ? `${API_BASE_URL}/warehouses/locations?warehouse_id=${warehouseId}` : `${API_BASE_URL}/warehouses/locations`;
     try {
-      const res = await fetch(url, {
-        headers: getAuthHeaders(),
-        signal: AbortSignal.timeout(8000)
-      });
+      const res = await apiFetch(url);
       if (res.ok) return await res.json();
     } catch { }
     const locs = mockStore.warehouses.flatMap(w => w.locations);
@@ -247,11 +271,9 @@ export const api = {
   },
 
   async createLocation(data: { warehouse_id: number; name: string; code: string }): Promise<Location> {
-    const res = await fetch(`${API_BASE_URL}/warehouses/locations`, {
+    const res = await apiFetch(`${API_BASE_URL}/warehouses/locations`, {
       method: 'POST',
-      headers: getAuthHeaders(),
-      body: JSON.stringify(data),
-      signal: AbortSignal.timeout(8000)
+      body: JSON.stringify(data)
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({ detail: 'Failed to create location' }));
@@ -261,11 +283,9 @@ export const api = {
   },
 
   async updateLocation(id: number, data: { warehouse_id?: number; name?: string; code?: string }): Promise<Location> {
-    const res = await fetch(`${API_BASE_URL}/warehouses/locations/${id}`, {
+    const res = await apiFetch(`${API_BASE_URL}/warehouses/locations/${id}`, {
       method: 'PUT',
-      headers: getAuthHeaders(),
-      body: JSON.stringify(data),
-      signal: AbortSignal.timeout(8000)
+      body: JSON.stringify(data)
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({ detail: 'Failed to update location' }));
@@ -277,10 +297,7 @@ export const api = {
   // --- Receipts ---
   async getReceipts(): Promise<Receipt[]> {
     try {
-      const res = await fetch(`${API_BASE_URL}/receipts`, {
-        headers: getAuthHeaders(),
-        signal: AbortSignal.timeout(8000)
-      });
+      const res = await apiFetch(`${API_BASE_URL}/receipts`);
       if (res.ok) return await res.json();
     } catch { }
     return mockStore.receipts;
@@ -288,10 +305,7 @@ export const api = {
 
   async getReceipt(receiptId: number): Promise<Receipt> {
     try {
-      const res = await fetch(`${API_BASE_URL}/receipts/${receiptId}`, {
-        headers: getAuthHeaders(),
-        signal: AbortSignal.timeout(8000)
-      });
+      const res = await apiFetch(`${API_BASE_URL}/receipts/${receiptId}`);
       if (res.ok) return await res.json();
     } catch { }
     const rec = mockStore.receipts.find(r => r.id === receiptId);
@@ -301,11 +315,9 @@ export const api = {
 
   async createReceipt(receiptData: any): Promise<Receipt> {
     try {
-      const res = await fetch(`${API_BASE_URL}/receipts`, {
+      const res = await apiFetch(`${API_BASE_URL}/receipts`, {
         method: 'POST',
-        headers: getAuthHeaders(),
-        body: JSON.stringify(receiptData),
-        signal: AbortSignal.timeout(2000)
+        body: JSON.stringify(receiptData)
       });
       if (res.ok) return await res.json();
     } catch { }
@@ -339,10 +351,8 @@ export const api = {
 
   async validateReceipt(receiptId: number): Promise<Receipt> {
     try {
-      const res = await fetch(`${API_BASE_URL}/receipts/${receiptId}/validate`, {
-        method: 'POST',
-        headers: getAuthHeaders(),
-        signal: AbortSignal.timeout(2000)
+      const res = await apiFetch(`${API_BASE_URL}/receipts/${receiptId}/validate`, {
+        method: 'POST'
       });
       if (res.ok) return await res.json();
       if (!res.ok) {
@@ -350,7 +360,7 @@ export const api = {
         throw new Error(err.detail || 'Validation failed');
       }
     } catch (e: any) {
-      if (e.message && e.message !== 'Failed to fetch') throw e;
+      if (e && !isNetworkOrTimeoutError(e)) throw e;
     }
 
     // Mock fallback: only validate if READY
@@ -401,10 +411,8 @@ export const api = {
 
   async markReceiptReady(receiptId: number): Promise<Receipt> {
     try {
-      const res = await fetch(`${API_BASE_URL}/receipts/${receiptId}/mark_ready`, {
-        method: 'POST',
-        headers: getAuthHeaders(),
-        signal: AbortSignal.timeout(2000)
+      const res = await apiFetch(`${API_BASE_URL}/receipts/${receiptId}/mark_ready`, {
+        method: 'POST'
       });
       if (res.ok) return await res.json();
       if (!res.ok) {
@@ -412,7 +420,7 @@ export const api = {
         throw new Error(err.detail || 'Failed to mark ready');
       }
     } catch (e: any) {
-      if (e.message && e.message !== 'Failed to fetch') throw e;
+      if (e && !isNetworkOrTimeoutError(e)) throw e;
     }
     // Mock fallback
     const receipt = mockStore.receipts.find(r => r.id === receiptId);
@@ -424,10 +432,8 @@ export const api = {
 
   async cancelReceipt(receiptId: number): Promise<Receipt> {
     try {
-      const res = await fetch(`${API_BASE_URL}/receipts/${receiptId}/cancel`, {
-        method: 'POST',
-        headers: getAuthHeaders(),
-        signal: AbortSignal.timeout(2000)
+      const res = await apiFetch(`${API_BASE_URL}/receipts/${receiptId}/cancel`, {
+        method: 'POST'
       });
       if (res.ok) return await res.json();
       if (!res.ok) {
@@ -435,7 +441,7 @@ export const api = {
         throw new Error(err.detail || 'Failed to cancel receipt');
       }
     } catch (e: any) {
-      if (e.message && e.message !== 'Failed to fetch') throw e;
+      if (e && !isNetworkOrTimeoutError(e)) throw e;
     }
     // Mock fallback
     const receipt = mockStore.receipts.find(r => r.id === receiptId);
@@ -448,10 +454,7 @@ export const api = {
   // --- Deliveries ---
   async getDeliveries(): Promise<Delivery[]> {
     try {
-      const res = await fetch(`${API_BASE_URL}/deliveries`, {
-        headers: getAuthHeaders(),
-        signal: AbortSignal.timeout(8000)
-      });
+      const res = await apiFetch(`${API_BASE_URL}/deliveries`);
       if (res.ok) return await res.json();
     } catch { }
     return mockStore.deliveries;
@@ -459,10 +462,7 @@ export const api = {
 
   async getDelivery(deliveryId: number): Promise<Delivery> {
     try {
-      const res = await fetch(`${API_BASE_URL}/deliveries/${deliveryId}`, {
-        headers: getAuthHeaders(),
-        signal: AbortSignal.timeout(8000)
-      });
+      const res = await apiFetch(`${API_BASE_URL}/deliveries/${deliveryId}`);
       if (res.ok) return await res.json();
     } catch { }
     const del = mockStore.deliveries.find(d => d.id === deliveryId);
@@ -472,11 +472,9 @@ export const api = {
 
   async createDelivery(deliveryData: any): Promise<Delivery> {
     try {
-      const res = await fetch(`${API_BASE_URL}/deliveries`, {
+      const res = await apiFetch(`${API_BASE_URL}/deliveries`, {
         method: 'POST',
-        headers: getAuthHeaders(),
-        body: JSON.stringify(deliveryData),
-        signal: AbortSignal.timeout(2000)
+        body: JSON.stringify(deliveryData)
       });
       if (res.ok) return await res.json();
     } catch { }
@@ -510,10 +508,8 @@ export const api = {
 
   async updateDeliveryStatus(deliveryId: number, status: string): Promise<Delivery> {
     try {
-      const res = await fetch(`${API_BASE_URL}/deliveries/${deliveryId}/status?new_status=${status}`, {
-        method: 'PUT',
-        headers: getAuthHeaders(),
-        signal: AbortSignal.timeout(2000)
+      const res = await apiFetch(`${API_BASE_URL}/deliveries/${deliveryId}/status?new_status=${status}`, {
+        method: 'PUT'
       });
       if (res.ok) return await res.json();
     } catch { }
@@ -526,10 +522,8 @@ export const api = {
 
   async checkDeliveryAvailability(deliveryId: number): Promise<Delivery> {
     try {
-      const res = await fetch(`${API_BASE_URL}/deliveries/${deliveryId}/check_availability`, {
-        method: 'POST',
-        headers: getAuthHeaders(),
-        signal: AbortSignal.timeout(2000)
+      const res = await apiFetch(`${API_BASE_URL}/deliveries/${deliveryId}/check_availability`, {
+        method: 'POST'
       });
       if (res.ok) return await res.json();
       if (!res.ok) {
@@ -537,7 +531,7 @@ export const api = {
         throw new Error(err.detail || 'Availability check failed');
       }
     } catch (e: any) {
-      if (e.message && e.message !== 'Failed to fetch') throw e;
+      if (e && !isNetworkOrTimeoutError(e)) throw e;
     }
     // Mock fallback: check if all items have stock
     const delivery = mockStore.deliveries.find(d => d.id === deliveryId);
@@ -554,10 +548,8 @@ export const api = {
 
   async markDeliveryReady(deliveryId: number): Promise<Delivery> {
     try {
-      const res = await fetch(`${API_BASE_URL}/deliveries/${deliveryId}/mark_ready`, {
-        method: 'POST',
-        headers: getAuthHeaders(),
-        signal: AbortSignal.timeout(2000)
+      const res = await apiFetch(`${API_BASE_URL}/deliveries/${deliveryId}/mark_ready`, {
+        method: 'POST'
       });
       if (res.ok) return await res.json();
       if (!res.ok) {
@@ -565,7 +557,7 @@ export const api = {
         throw new Error(err.detail || 'Failed to mark delivery ready');
       }
     } catch (e: any) {
-      if (e.message && e.message !== 'Failed to fetch') throw e;
+      if (e && !isNetworkOrTimeoutError(e)) throw e;
     }
     // Mock fallback
     const delivery = mockStore.deliveries.find(d => d.id === deliveryId);
@@ -576,10 +568,8 @@ export const api = {
 
   async cancelDelivery(deliveryId: number): Promise<Delivery> {
     try {
-      const res = await fetch(`${API_BASE_URL}/deliveries/${deliveryId}/cancel`, {
-        method: 'POST',
-        headers: getAuthHeaders(),
-        signal: AbortSignal.timeout(2000)
+      const res = await apiFetch(`${API_BASE_URL}/deliveries/${deliveryId}/cancel`, {
+        method: 'POST'
       });
       if (res.ok) return await res.json();
       if (!res.ok) {
@@ -587,7 +577,7 @@ export const api = {
         throw new Error(err.detail || 'Failed to cancel delivery');
       }
     } catch (e: any) {
-      if (e.message && e.message !== 'Failed to fetch') throw e;
+      if (e && !isNetworkOrTimeoutError(e)) throw e;
     }
     // Mock fallback
     const delivery = mockStore.deliveries.find(d => d.id === deliveryId);
@@ -599,10 +589,8 @@ export const api = {
 
   async validateDelivery(deliveryId: number): Promise<Delivery> {
     try {
-      const res = await fetch(`${API_BASE_URL}/deliveries/${deliveryId}/validate`, {
-        method: 'POST',
-        headers: getAuthHeaders(),
-        signal: AbortSignal.timeout(2000)
+      const res = await apiFetch(`${API_BASE_URL}/deliveries/${deliveryId}/validate`, {
+        method: 'POST'
       });
       if (res.ok) return await res.json();
       if (!res.ok) {
@@ -610,7 +598,7 @@ export const api = {
         throw new Error(err.detail || 'Validation failed');
       }
     } catch (e: any) {
-      if (e.message && e.message !== 'Failed to fetch') throw e;
+      if (e && !isNetworkOrTimeoutError(e)) throw e;
     }
 
     // Mock fallback: only validate if READY
@@ -654,10 +642,7 @@ export const api = {
   // --- Internal Transfers ---
   async getTransfers(): Promise<InternalTransfer[]> {
     try {
-      const res = await fetch(`${API_BASE_URL}/transfers`, {
-        headers: getAuthHeaders(),
-        signal: AbortSignal.timeout(1500)
-      });
+      const res = await apiFetch(`${API_BASE_URL}/transfers`);
       if (res.ok) return await res.json();
     } catch { }
     return mockStore.transfers;
@@ -665,11 +650,9 @@ export const api = {
 
   async createTransfer(transferData: any): Promise<InternalTransfer> {
     try {
-      const res = await fetch(`${API_BASE_URL}/transfers`, {
+      const res = await apiFetch(`${API_BASE_URL}/transfers`, {
         method: 'POST',
-        headers: getAuthHeaders(),
-        body: JSON.stringify(transferData),
-        signal: AbortSignal.timeout(2000)
+        body: JSON.stringify(transferData)
       });
       if (res.ok) return await res.json();
     } catch { }
@@ -701,10 +684,8 @@ export const api = {
 
   async completeTransfer(transferId: number): Promise<InternalTransfer> {
     try {
-      const res = await fetch(`${API_BASE_URL}/transfers/${transferId}/complete`, {
-        method: 'POST',
-        headers: getAuthHeaders(),
-        signal: AbortSignal.timeout(2000)
+      const res = await apiFetch(`${API_BASE_URL}/transfers/${transferId}/complete`, {
+        method: 'POST'
       });
       if (res.ok) return await res.json();
     } catch { }
@@ -783,10 +764,7 @@ export const api = {
   // --- Adjustments ---
   async getAdjustments(): Promise<StockAdjustment[]> {
     try {
-      const res = await fetch(`${API_BASE_URL}/adjustments`, {
-        headers: getAuthHeaders(),
-        signal: AbortSignal.timeout(1500)
-      });
+      const res = await apiFetch(`${API_BASE_URL}/adjustments`);
       if (res.ok) return await res.json();
     } catch { }
     return mockStore.adjustments;
@@ -794,11 +772,9 @@ export const api = {
 
   async createAdjustment(adjData: any): Promise<StockAdjustment> {
     try {
-      const res = await fetch(`${API_BASE_URL}/adjustments`, {
+      const res = await apiFetch(`${API_BASE_URL}/adjustments`, {
         method: 'POST',
-        headers: getAuthHeaders(),
-        body: JSON.stringify(adjData),
-        signal: AbortSignal.timeout(8000)
+        body: JSON.stringify(adjData)
       });
       if (res.ok) return await res.json();
       if (!res.ok) {
@@ -806,7 +782,7 @@ export const api = {
         throw new Error(err.detail || 'Failed to record adjustment');
       }
     } catch (e: any) {
-      if (e.message && e.message !== 'Failed to fetch' && !e.name?.includes('Abort')) throw e;
+      if (e && !isNetworkOrTimeoutError(e)) throw e;
     }
 
     const prod = mockStore.products.find(p => p.id === Number(adjData.product_id));
@@ -876,10 +852,7 @@ export const api = {
   // --- Stock Ledger ---
   async getLedger(): Promise<StockLedgerEntry[]> {
     try {
-      const res = await fetch(`${API_BASE_URL}/ledger`, {
-        headers: getAuthHeaders(),
-        signal: AbortSignal.timeout(1500)
-      });
+      const res = await apiFetch(`${API_BASE_URL}/ledger`);
       if (res.ok) return await res.json();
     } catch { }
     return mockStore.ledger;

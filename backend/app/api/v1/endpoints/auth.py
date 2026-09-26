@@ -1,21 +1,22 @@
-import random
+import hashlib
+import secrets
 from datetime import datetime, timedelta
-from typing import Dict
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from app.api.deps import get_db, get_current_user
+from app.core.config import settings
 from app.core.security import create_access_token, get_password_hash, verify_password
 from app.models.user import User
+from app.models.password_reset import PasswordReset
 from app.schemas.auth import (
     UserCreate, UserLogin, UserOut, Token,
-    PasswordResetRequest, PasswordResetConfirm
+    PasswordResetRequest, PasswordResetResponse,
+    OTPVerifyRequest, OTPVerifyResponse,
+    PasswordResetConfirm
 )
+from app.services.email_service import send_otp_email, SMTPConfigurationError, SMTPDeliveryError
 
 router = APIRouter()
-
-# In-memory OTP store for lightweight password reset (hackathon-friendly)
-# In production, this can be stored in Redis or sent via Supabase Auth
-OTP_STORE: Dict[str, dict] = {}
 
 
 @router.post("/signup", response_model=Token, status_code=status.HTTP_201_CREATED)
@@ -60,47 +61,284 @@ def logout():
     return {"message": "Successfully logged out"}
 
 
-@router.post("/forgot-password")
+@router.post("/forgot-password", response_model=PasswordResetResponse)
 def forgot_password(req: PasswordResetRequest, db: Session = Depends(get_db)):
+    """
+    Initiates the OTP password-reset flow:
+    - Finds registered user.
+    - Enforces resend cooldown (60 seconds).
+    - Generates cryptographically secure 6-digit OTP in FastAPI.
+    - Stores hashed OTP, salt, attempts, and expiry in SQLAlchemy.
+    - Dispatches OTP through SMTP / email service.
+    - Never exposes OTP in API response.
+    """
     user = db.query(User).filter(User.email == req.email).first()
     if not user:
-        # Don't leak user presence
-        return {"message": "If this email is registered, an OTP has been generated"}
+        # Don't leak user presence to attackers
+        return PasswordResetResponse(
+            message="If this email is registered, a 6-digit verification code has been sent.",
+            email=req.email,
+            cooldown_seconds=settings.OTP_RESEND_COOLDOWN_SECONDS
+        )
 
-    # Generate a 6-digit OTP
-    otp = f"{random.randint(100000, 999999)}"
-    OTP_STORE[req.email] = {
-        "otp": otp,
-        "expires_at": datetime.utcnow() + timedelta(minutes=15)
-    }
+    # Check for recent active reset request to enforce cooldown
+    latest_reset = (
+        db.query(PasswordReset)
+        .filter(PasswordReset.user_id == user.id, PasswordReset.is_consumed == False)
+        .order_by(PasswordReset.created_at.desc())
+        .first()
+    )
 
-    # Return OTP in response for testing/hackathon convenience
-    return {
-        "message": "OTP generated successfully",
-        "demo_otp": otp,
-        "note": "In production, this OTP is dispatched via Supabase Auth email."
-    }
+    now = datetime.utcnow()
+    if latest_reset:
+        time_elapsed = (now - latest_reset.last_sent_at).total_seconds()
+        if time_elapsed < settings.OTP_RESEND_COOLDOWN_SECONDS:
+            remaining = int(settings.OTP_RESEND_COOLDOWN_SECONDS - time_elapsed)
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail=f"Please wait {remaining} seconds before requesting a new verification code."
+            )
+        # Mark previous active reset as consumed/superseded
+        latest_reset.is_consumed = True
+        db.add(latest_reset)
+
+    # Generate secure 6-digit OTP
+    otp = f"{secrets.randbelow(900000) + 100000:06d}"
+    salt = secrets.token_hex(16)
+    hashed_otp = hashlib.sha256(f"{salt}{otp}".encode("utf-8")).hexdigest()
+
+    new_reset = PasswordReset(
+        user_id=user.id,
+        email=user.email,
+        hashed_otp=hashed_otp,
+        salt=salt,
+        expires_at=now + timedelta(minutes=settings.OTP_EXPIRE_MINUTES),
+        attempts=0,
+        max_attempts=settings.OTP_MAX_ATTEMPTS,
+        last_sent_at=now,
+        is_verified=False,
+        is_consumed=False
+    )
+    db.add(new_reset)
+    db.commit()
+
+    # Dispatch OTP via email service (raises clear error if unconfigured or delivery fails)
+    try:
+        send_otp_email(user.email, otp, expires_in_minutes=settings.OTP_EXPIRE_MINUTES)
+    except (SMTPConfigurationError, SMTPDeliveryError, Exception) as e:
+        # Delete un-sent reset entry so user is not stuck in a cooldown lock
+        db.delete(new_reset)
+        db.commit()
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=str(e)
+        )
+
+    return PasswordResetResponse(
+        message="A 6-digit verification code has been sent to your email address.",
+        email=user.email,
+        cooldown_seconds=settings.OTP_RESEND_COOLDOWN_SECONDS
+    )
+
+
+@router.post("/resend-otp", response_model=PasswordResetResponse)
+def resend_otp(req: PasswordResetRequest, db: Session = Depends(get_db)):
+    """
+    Alias endpoint for resending OTP adhering to the exact same cooldown and generation rules.
+    """
+    return forgot_password(req=req, db=db)
+
+
+@router.post("/verify-otp", response_model=OTPVerifyResponse)
+def verify_otp(req: OTPVerifyRequest, db: Session = Depends(get_db)):
+    """
+    Verifies the 6-digit OTP entirely in FastAPI:
+    - Validates expiry and attempt limit.
+    - Verifies constant-time hash comparison against salted hash in DB.
+    - Generates a single-use verified reset_token.
+    - Allows password change only after successful verification.
+    """
+    clean_otp = req.otp.strip()
+    if not clean_otp.isdigit() or len(clean_otp) != 6:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Verification code must be exactly 6 digits."
+        )
+
+    reset_entry = (
+        db.query(PasswordReset)
+        .filter(PasswordReset.email == req.email, PasswordReset.is_consumed == False)
+        .order_by(PasswordReset.created_at.desc())
+        .first()
+    )
+
+    if not reset_entry:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No active password reset request found. Please request a new code."
+        )
+
+    now = datetime.utcnow()
+    if now > reset_entry.expires_at:
+        reset_entry.is_consumed = True
+        db.commit()
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="The verification code has expired. Please request a new code."
+        )
+
+    if reset_entry.attempts >= reset_entry.max_attempts:
+        reset_entry.is_consumed = True
+        db.commit()
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Maximum verification attempts exceeded. Please request a new code."
+        )
+
+    # Constant-time salted SHA-256 verification
+    expected_hash = hashlib.sha256(f"{reset_entry.salt}{clean_otp}".encode("utf-8")).hexdigest()
+    if not secrets.compare_digest(reset_entry.hashed_otp, expected_hash):
+        reset_entry.attempts += 1
+        db.commit()
+        remaining = reset_entry.max_attempts - reset_entry.attempts
+        if remaining <= 0:
+            reset_entry.is_consumed = True
+            db.commit()
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid verification code. Maximum attempts exceeded. Please request a new code."
+            )
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid verification code. {remaining} attempt(s) remaining."
+        )
+
+    # Validated successfully -> issue verified reset token
+    reset_token = secrets.token_urlsafe(32)
+    reset_entry.is_verified = True
+    reset_entry.reset_token = reset_token
+    reset_entry.reset_token_expires_at = now + timedelta(minutes=15)
+    db.commit()
+
+    return OTPVerifyResponse(
+        message="Verification code confirmed successfully.",
+        reset_token=reset_token
+    )
 
 
 @router.post("/reset-password")
 def reset_password(req: PasswordResetConfirm, db: Session = Depends(get_db)):
-    stored = OTP_STORE.get(req.email)
-    if not stored:
-        raise HTTPException(status_code=400, detail="Invalid or expired OTP request")
-    if stored["expires_at"] < datetime.utcnow():
-        OTP_STORE.pop(req.email, None)
-        raise HTTPException(status_code=400, detail="OTP has expired")
-    if stored["otp"] != req.otp:
-        raise HTTPException(status_code=400, detail="Invalid OTP code")
+    """
+    Resets the user's password:
+    - Validates new password length.
+    - Requires either a verified reset_token or directly valid OTP.
+    - Hashes password using existing PBKDF2/SHA-256 security system.
+    - Consumes the reset token to prevent reuse.
+    """
+    if not req.new_password or len(req.new_password) < 6:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Password must be at least 6 characters long."
+        )
 
-    user = db.query(User).filter(User.email == req.email).first()
+    now = datetime.utcnow()
+    reset_entry = None
+
+    if req.reset_token:
+        reset_entry = (
+            db.query(PasswordReset)
+            .filter(
+                PasswordReset.reset_token == req.reset_token,
+                PasswordReset.email == req.email,
+                PasswordReset.is_verified == True,
+                PasswordReset.is_consumed == False
+            )
+            .first()
+        )
+        if not reset_entry:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid or expired reset session. Please verify your OTP code again."
+            )
+        if reset_entry.reset_token_expires_at and now > reset_entry.reset_token_expires_at:
+            reset_entry.is_consumed = True
+            db.commit()
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Reset session has expired. Please request a new verification code."
+            )
+
+    elif req.otp:
+        clean_otp = req.otp.strip()
+        reset_entry = (
+            db.query(PasswordReset)
+            .filter(PasswordReset.email == req.email, PasswordReset.is_consumed == False)
+            .order_by(PasswordReset.created_at.desc())
+            .first()
+        )
+        if not reset_entry:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="No active password reset request found. Please request a new code."
+            )
+        if now > reset_entry.expires_at:
+            reset_entry.is_consumed = True
+            db.commit()
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="The verification code has expired. Please request a new code."
+            )
+        if reset_entry.attempts >= reset_entry.max_attempts:
+            reset_entry.is_consumed = True
+            db.commit()
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Maximum verification attempts exceeded. Please request a new code."
+            )
+
+        expected_hash = hashlib.sha256(f"{reset_entry.salt}{clean_otp}".encode("utf-8")).hexdigest()
+        if not secrets.compare_digest(reset_entry.hashed_otp, expected_hash):
+            reset_entry.attempts += 1
+            db.commit()
+            remaining = reset_entry.max_attempts - reset_entry.attempts
+            if remaining <= 0:
+                reset_entry.is_consumed = True
+                db.commit()
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Invalid verification code. Maximum attempts exceeded. Please request a new code."
+                )
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid verification code. {remaining} attempt(s) remaining."
+            )
+        reset_entry.is_verified = True
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Verification code or verified reset token is required."
+        )
+
+    # Ensure reset_entry is verified
+    if not reset_entry.is_verified:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Verification code must be verified before changing password."
+        )
+
+    user = db.query(User).filter(User.id == reset_entry.user_id).first()
     if not user:
-        raise HTTPException(status_code=404, detail="User not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User account not found."
+        )
 
+    # Hash using the existing PBKDF2/SHA-256 auth system
     user.hashed_password = get_password_hash(req.new_password)
+    reset_entry.is_consumed = True
     db.commit()
-    OTP_STORE.pop(req.email, None)
-    return {"message": "Password reset successfully. You may now log in."}
+
+    return {"message": "Password reset successfully. You may now log in with your new password."}
 
 
 @router.get("/me", response_model=UserOut)
