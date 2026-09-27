@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { api } from '../services/api';
 import { DashboardSummary, Category, Warehouse, Product } from '../types';
 import { StatCard } from '../components/common/StatCard';
@@ -32,6 +32,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigateTab, onQuickRece
   const [selectedStatus, setSelectedStatus] = useState('');
   const [selectedWarehouse, setSelectedWarehouse] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
+  const [showOnlyLate, setShowOnlyLate] = useState(false);
+
+  const operationsTableRef = useRef<HTMLDivElement>(null);
 
   const loadData = async () => {
     setLoading(true);
@@ -74,14 +77,30 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigateTab, onQuickRece
     setSelectedStatus('');
     setSelectedWarehouse('');
     setSelectedCategory('');
+    setShowOnlyLate(false);
   };
+
+  const handleLateOperationsClick = () => {
+    setSelectedDocType('');
+    setSelectedStatus('');
+    setShowOnlyLate(true);
+    setTimeout(() => {
+      operationsTableRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 50);
+  };
+
+  const displayedOperations = useMemo(() => {
+    const docs = summary?.operations || [];
+    if (!showOnlyLate) return docs;
+    return docs.filter((doc) => doc.is_late);
+  }, [summary?.operations, showOnlyLate]);
 
   if (loading && !summary) {
     return (
       <div className="flex h-96 items-center justify-center">
         <div className="text-center">
-          <div className="w-10 h-10 border-4 border-brand-600 border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
-          <p className="text-xs text-slate-500">Loading real-time stock metrics & operational pipeline...</p>
+          <div className="w-8 h-8 border-2 border-brand-600 border-t-transparent rounded-full animate-spin mx-auto mb-2.5"></div>
+          <p className="text-xs text-slate-500">Loading operational pipeline and stock metrics...</p>
         </div>
       </div>
     );
@@ -90,13 +109,13 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigateTab, onQuickRece
   if (!summary) return null;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       {/* Top Banner & Quick Action Buttons */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-white p-5 rounded-xl border border-slate-200/80 shadow-sm">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-1">
         <div>
-          <h2 className="text-xl font-bold text-slate-900 tracking-tight">
+          <h1 className="text-xl font-semibold text-slate-900 tracking-tight">
             {isManager ? 'Executive Stock Overview' : 'Operations Dashboard'}
-          </h2>
+          </h1>
           <p className="text-xs text-slate-500 mt-0.5">
             {isManager
               ? 'Real-time inventory registry, dynamic operational pipeline & warehouse metrics'
@@ -108,21 +127,21 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigateTab, onQuickRece
         <div className="flex flex-wrap items-center gap-2">
           <button
             onClick={() => onNavigateTab('receipts')}
-            className="inline-flex items-center gap-1.5 px-3 py-2 bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold rounded-lg shadow-sm transition-all"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-brand-600 hover:bg-brand-700 text-white text-xs font-medium rounded-md shadow-xs transition-colors"
           >
             <Truck className="w-3.5 h-3.5" />
             <span>New Receipt</span>
           </button>
           <button
             onClick={() => onNavigateTab('deliveries')}
-            className="inline-flex items-center gap-1.5 px-3 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold rounded-lg shadow-sm transition-all"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-medium rounded-md shadow-xs transition-colors"
           >
             <Send className="w-3.5 h-3.5" />
             <span>Dispatch Order</span>
           </button>
           <button
             onClick={() => onNavigateTab('transfers')}
-            className="inline-flex items-center gap-1.5 px-3 py-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 text-xs font-medium rounded-lg shadow-sm transition-all"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 text-xs font-medium rounded-md shadow-xs transition-colors"
           >
             <ArrowLeftRight className="w-3.5 h-3.5 text-slate-500" />
             <span>Internal Transfer</span>
@@ -130,7 +149,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigateTab, onQuickRece
           {isManager ? (
             <button
               onClick={() => onNavigateTab('products')}
-              className="inline-flex items-center gap-1.5 px-3 py-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 text-xs font-medium rounded-lg shadow-sm transition-all"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 text-xs font-medium rounded-md shadow-xs transition-colors"
             >
               <Plus className="w-3.5 h-3.5 text-slate-500" />
               <span>Add Product</span>
@@ -138,7 +157,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigateTab, onQuickRece
           ) : (
             <button
               onClick={() => onNavigateTab('adjustments')}
-              className="inline-flex items-center gap-1.5 px-3 py-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 text-xs font-medium rounded-lg shadow-sm transition-all"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 text-xs font-medium rounded-md shadow-xs transition-colors"
             >
               <SlidersHorizontal className="w-3.5 h-3.5 text-slate-500" />
               <span>Stock Adjustment</span>
@@ -162,8 +181,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigateTab, onQuickRece
         onReset={handleResetFilters}
       />
 
-      {/* Required Operational KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* Operational KPI Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
         <StatCard
           title="Receipts to Receive"
           value={summary.kpis.receipts_to_receive ?? summary.kpis.pending_receipts}
@@ -192,6 +211,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigateTab, onQuickRece
           color="rose"
           badgeText={summary.kpis.late_operations && summary.kpis.late_operations > 0 ? "Past Due" : "All on Time"}
           badgeType={summary.kpis.late_operations && summary.kpis.late_operations > 0 ? "alert" : "success"}
+          onClick={handleLateOperationsClick}
         />
         <StatCard
           title="Waiting Operations"
@@ -206,7 +226,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigateTab, onQuickRece
       </div>
 
       {/* Core Inventory Health KPIs */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
         <StatCard
           title="Total In Stock"
           value={summary.kpis.total_units_in_stock}
@@ -225,7 +245,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigateTab, onQuickRece
           color="amber"
           badgeText="Restock Soon"
           badgeType="warning"
-          onClick={() => onNavigateTab('products')}
+          onClick={() => onNavigateTab('stock')}
         />
         <StatCard
           title="Out of Stock"
@@ -235,7 +255,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigateTab, onQuickRece
           color="rose"
           badgeText={summary.kpis.out_of_stock_count > 0 ? "Critical" : "All Clear"}
           badgeType={summary.kpis.out_of_stock_count > 0 ? "alert" : "neutral"}
-          onClick={() => onNavigateTab('products')}
+          onClick={() => onNavigateTab('stock')}
         />
         <StatCard
           title="Scheduled Transfers"
@@ -249,20 +269,24 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigateTab, onQuickRece
         />
       </div>
 
-      {/* Operations Pipeline Summary (Kanban / Cards from Mockup) */}
+      {/* Operations Pipeline Summary */}
       <OperationsOverview
         summaries={summary.operation_summaries || []}
         onNavigateTab={onNavigateTab}
       />
 
       {/* Filtered Document Pipeline Table */}
-      <OperationsTable
-        documents={summary.operations || []}
-        onNavigateTab={onNavigateTab}
-      />
+      <div ref={operationsTableRef}>
+        <OperationsTable
+          documents={displayedOperations}
+          onNavigateTab={onNavigateTab}
+          isLateFilterActive={showOnlyLate}
+          onClearLateFilter={() => setShowOnlyLate(false)}
+        />
+      </div>
 
       {/* Analytical Visualizations Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
         <StockLevelChart data={summary.category_distribution} />
         <MovementSummary trends={summary.movement_trends} />
       </div>

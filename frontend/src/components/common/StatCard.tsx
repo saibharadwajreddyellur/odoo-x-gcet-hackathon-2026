@@ -22,43 +22,43 @@ export const StatCard: React.FC<StatCardProps> = ({
   badgeType = 'neutral',
   onClick
 }) => {
-  const colorStyles = {
-    emerald: { bg: 'bg-emerald-50', text: 'text-emerald-600', ring: 'focus:ring-emerald-500' },
-    amber: { bg: 'bg-amber-50', text: 'text-amber-600', ring: 'focus:ring-amber-500' },
-    rose: { bg: 'bg-rose-50', text: 'text-rose-600', ring: 'focus:ring-rose-500' },
-    blue: { bg: 'bg-blue-50', text: 'text-blue-600', ring: 'focus:ring-blue-500' },
-    indigo: { bg: 'bg-indigo-50', text: 'text-indigo-600', ring: 'focus:ring-indigo-500' },
-    slate: { bg: 'bg-slate-100', text: 'text-slate-700', ring: 'focus:ring-slate-500' }
+  const iconColors = {
+    emerald: 'text-brand-700 bg-brand-50 border-brand-200/60',
+    amber: 'text-amber-700 bg-amber-50 border-amber-200/60',
+    rose: 'text-rose-700 bg-rose-50 border-rose-200/60',
+    blue: 'text-blue-700 bg-blue-50 border-blue-200/60',
+    indigo: 'text-indigo-700 bg-indigo-50 border-indigo-200/60',
+    slate: 'text-slate-600 bg-slate-100 border-slate-200'
   }[color];
 
   const badgeStyles = {
-    neutral: 'bg-slate-100 text-slate-700',
-    alert: 'bg-rose-100 text-rose-800 animate-pulse',
-    warning: 'bg-amber-100 text-amber-800',
-    success: 'bg-emerald-100 text-emerald-800'
+    neutral: 'bg-slate-100 text-slate-700 border-slate-200',
+    alert: 'bg-rose-50 text-rose-700 border-rose-200',
+    warning: 'bg-amber-50 text-amber-700 border-amber-200',
+    success: 'bg-brand-50 text-brand-700 border-brand-200'
   }[badgeType];
 
   return (
     <div
       onClick={onClick}
-      className={`bg-white rounded-xl border border-slate-200/80 p-5 shadow-sm hover:shadow-md transition-all duration-200 ${
-        onClick ? 'cursor-pointer hover:border-slate-300' : ''
+      className={`bg-white rounded-lg border border-slate-200 p-4 shadow-[0_1px_2px_0_rgba(0,0,0,0.02)] transition-colors ${
+        onClick ? 'cursor-pointer hover:border-slate-300 hover:shadow-xs' : ''
       }`}
     >
-      <div className="flex items-center justify-between mb-3">
-        <div className={`p-2.5 rounded-lg ${colorStyles.bg} ${colorStyles.text}`}>
-          <Icon className="w-5 h-5" />
+      <div className="flex items-center justify-between mb-2.5">
+        <div className={`p-1.5 rounded border ${iconColors}`}>
+          <Icon className="w-4 h-4" />
         </div>
         {badgeText && (
-          <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${badgeStyles}`}>
+          <span className={`text-[11px] font-medium px-1.5 py-0.5 rounded border ${badgeStyles}`}>
             {badgeText}
           </span>
         )}
       </div>
       <div>
-        <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">{title}</p>
-        <h3 className="text-2xl font-bold text-slate-900 mt-1">{value}</h3>
-        {subtitle && <p className="text-xs text-slate-400 mt-1">{subtitle}</p>}
+        <p className="text-xs font-medium text-slate-500">{title}</p>
+        <p className="text-2xl font-semibold text-slate-900 tracking-tight mt-0.5">{value}</p>
+        {subtitle && <p className="text-xs text-slate-500 mt-1 truncate">{subtitle}</p>}
       </div>
     </div>
   );

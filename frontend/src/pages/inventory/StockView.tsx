@@ -3,12 +3,14 @@ import { api } from '../../services/api';
 import { Product, Warehouse, Category, StockAdjustment } from '../../types';
 import { Modal } from '../../components/common/Modal';
 import { Badge } from '../../components/common/Badge';
+import { InfoBanner } from '../../components/common/InfoBanner';
 import {
   Boxes, Search, Filter, SlidersHorizontal, RefreshCw,
   ArrowUpDown, AlertTriangle, CheckCircle, MapPin, Tag,
   IndianRupee, PackageCheck, ShieldAlert, Plus, Sparkles
 } from 'lucide-react';
 import { NavTab } from '../../components/common/Sidebar';
+import { calculateStockAlerts, useStockAlerts } from '../../context/StockAlertContext';
 
 interface StockRow {
   key: string;
@@ -29,13 +31,24 @@ interface StockRow {
   stockStatus: string;
 }
 
+export type StockStatusFilter = 'ALL' | 'ATTENTION' | 'LOW_STOCK' | 'OUT_OF_STOCK' | 'IN_STOCK' | 'RESERVED';
+
 interface StockViewProps {
   onNavigateTab?: (tab: NavTab) => void;
   externalSearchTerm?: string;
   onSearchChange?: (term: string) => void;
+  initialStatusFilter?: StockStatusFilter;
+  onStatusFilterChange?: (filter: StockStatusFilter) => void;
 }
 
-export const StockView: React.FC<StockViewProps> = ({ onNavigateTab, externalSearchTerm, onSearchChange }) => {
+export const StockView: React.FC<StockViewProps> = ({
+  onNavigateTab,
+  externalSearchTerm,
+  onSearchChange,
+  initialStatusFilter,
+  onStatusFilterChange
+}) => {
+  const { refreshStockAlerts } = useStockAlerts();
   const [products, setProducts] = useState<Product[]>([]);
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -52,7 +65,21 @@ export const StockView: React.FC<StockViewProps> = ({ onNavigateTab, externalSea
   }, [externalSearchTerm]);
   const [categoryFilter, setCategoryFilter] = useState('');
   const [locationFilter, setLocationFilter] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'ALL' | 'IN_STOCK' | 'LOW_STOCK' | 'OUT_OF_STOCK' | 'RESERVED'>('ALL');
+  const [statusFilter, setStatusFilterState] = useState<StockStatusFilter>(
+    initialStatusFilter || 'ALL'
+  );
+
+  const setStatusFilter = (val: StockStatusFilter) => {
+    setStatusFilterState(val);
+    onStatusFilterChange?.(val);
+  };
+
+  useEffect(() => {
+    if (initialStatusFilter) {
+      setStatusFilterState(initialStatusFilter);
+    }
+  }, [initialStatusFilter]);
+
   const [sortBy, setSortBy] = useState<'name' | 'onHand' | 'freeToUse' | 'cost'>('name');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
 
@@ -201,7 +228,8 @@ export const StockView: React.FC<StockViewProps> = ({ onNavigateTab, externalSea
 
         // Status filter
         let matchesStatus = true;
-        if (statusFilter === 'IN_STOCK') matchesStatus = row.onHand > 0;
+        if (statusFilter === 'ATTENTION') matchesStatus = row.onHand <= row.minStockAlert;
+        else if (statusFilter === 'IN_STOCK') matchesStatus = row.onHand > 0;
         else if (statusFilter === 'LOW_STOCK') matchesStatus = row.onHand > 0 && row.onHand <= row.minStockAlert;
         else if (statusFilter === 'OUT_OF_STOCK') matchesStatus = row.onHand === 0;
         else if (statusFilter === 'RESERVED') matchesStatus = row.reserved > 0;
@@ -218,14 +246,13 @@ export const StockView: React.FC<StockViewProps> = ({ onNavigateTab, externalSea
       });
   }, [stockRows, searchTerm, categoryFilter, locationFilter, statusFilter, sortBy, sortOrder]);
 
-  // Aggregate Metrics
+  // Aggregate Metrics using the shared single source of truth logic
   const metrics = useMemo(() => {
     const totalOnHand = stockRows.reduce((acc, r) => acc + r.onHand, 0);
     const totalFreeToUse = stockRows.reduce((acc, r) => acc + r.freeToUse, 0);
     const totalReserved = stockRows.reduce((acc, r) => acc + r.reserved, 0);
     const totalValuation = stockRows.reduce((acc, r) => acc + r.onHand * r.unitPrice, 0);
-    const lowStockCount = stockRows.filter(r => r.onHand > 0 && r.onHand <= r.minStockAlert).length;
-    const outOfStockCount = stockRows.filter(r => r.onHand === 0).length;
+    const { lowStockCount, outOfStockCount, totalAttentionCount } = calculateStockAlerts(products);
 
     return {
       totalOnHand,
@@ -234,9 +261,10 @@ export const StockView: React.FC<StockViewProps> = ({ onNavigateTab, externalSea
       totalValuation,
       lowStockCount,
       outOfStockCount,
+      totalAttentionCount,
       totalPositions: stockRows.length
     };
-  }, [stockRows]);
+  }, [stockRows, products]);
 
   // Open adjustment modal prefilled for a specific row
   const handleOpenRowAdjustment = (row: StockRow) => {
@@ -340,6 +368,7 @@ export const StockView: React.FC<StockViewProps> = ({ onNavigateTab, externalSea
 
       // Reload data to reflect new stock on hand and ledger
       await loadData(false);
+      await refreshStockAlerts();
       setIsAdjustModalOpen(false);
 
       // Auto-clear toast after 6 seconds
@@ -396,24 +425,19 @@ export const StockView: React.FC<StockViewProps> = ({ onNavigateTab, externalSea
       )}
 
       {/* Header Banner */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 bg-white p-5 rounded-xl border border-slate-200/80 shadow-sm">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 pb-1">
         <div>
-          <div className="flex items-center gap-2">
-            <span className="p-1.5 rounded-lg bg-brand-50 text-brand-600">
-              <Boxes className="w-5 h-5" />
-            </span>
-            <h1 className="text-xl font-bold text-slate-900 tracking-tight">Stock View & Inventory Availability</h1>
-          </div>
-          <p className="text-xs text-slate-500 mt-1">
+          <h1 className="text-xl font-semibold text-slate-900 tracking-tight">Stock View & Inventory Availability</h1>
+          <p className="text-xs text-slate-500 mt-0.5">
             Real-time multi-location availability, physical on-hand tracking, free-to-use dispatch quantities, and ledger-backed adjustment audits.
           </p>
         </div>
 
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-center gap-2">
           <button
             onClick={() => loadData(false)}
             disabled={refreshing}
-            className="inline-flex items-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-lg transition-colors border border-slate-200"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-slate-50 text-slate-700 text-xs font-medium rounded-md transition-colors border border-slate-200 shadow-xs"
             title="Refresh stock levels"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin' : ''}`} />
@@ -422,7 +446,7 @@ export const StockView: React.FC<StockViewProps> = ({ onNavigateTab, externalSea
 
           <button
             onClick={handleOpenGenericAdjustment}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold rounded-lg shadow-sm transition-all"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-brand-600 hover:bg-brand-700 text-white text-xs font-medium rounded-md shadow-xs transition-colors"
           >
             <SlidersHorizontal className="w-3.5 h-3.5" />
             <span>Update / Adjust Stock</span>
@@ -431,81 +455,95 @@ export const StockView: React.FC<StockViewProps> = ({ onNavigateTab, externalSea
       </div>
 
       {/* Real-time KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-sm">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+        <div className="bg-white p-4 rounded-lg border border-slate-200 shadow-[0_1px_2px_0_rgba(0,0,0,0.02)]">
           <div className="flex items-center justify-between text-slate-500">
             <span className="text-xs font-medium">Total Physical On Hand</span>
-            <span className="p-1.5 rounded-lg bg-blue-50 text-blue-600">
+            <span className="p-1.5 rounded border border-blue-200/60 bg-blue-50 text-blue-700">
               <Boxes className="w-4 h-4" />
             </span>
           </div>
           <div className="mt-2 flex items-baseline gap-2">
-            <span className="text-2xl font-bold text-slate-900">{metrics.totalOnHand.toLocaleString()}</span>
-            <span className="text-xs text-slate-400">units in warehouses</span>
+            <span className="text-2xl font-semibold text-slate-900 tracking-tight">{metrics.totalOnHand.toLocaleString()}</span>
+            <span className="text-xs text-slate-500">units in warehouses</span>
           </div>
           <p className="text-[11px] text-slate-500 mt-1">Across {metrics.totalPositions} active stock positions</p>
         </div>
 
-        <div className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-sm">
+        <div className="bg-white p-4 rounded-lg border border-slate-200 shadow-[0_1px_2px_0_rgba(0,0,0,0.02)]">
           <div className="flex items-center justify-between text-slate-500">
             <span className="text-xs font-medium">Free to Use (Available)</span>
-            <span className="p-1.5 rounded-lg bg-emerald-50 text-emerald-600">
+            <span className="p-1.5 rounded border border-emerald-200/60 bg-emerald-50 text-emerald-700">
               <PackageCheck className="w-4 h-4" />
             </span>
           </div>
           <div className="mt-2 flex items-baseline gap-2">
-            <span className="text-2xl font-bold text-emerald-600">{metrics.totalFreeToUse.toLocaleString()}</span>
-            <span className="text-xs text-slate-400">units unreserved</span>
+            <span className="text-2xl font-semibold text-slate-900 tracking-tight">{metrics.totalFreeToUse.toLocaleString()}</span>
+            <span className="text-xs text-slate-500">units unreserved</span>
           </div>
           <p className="text-[11px] text-slate-500 mt-1">
             {metrics.totalReserved > 0 ? `${metrics.totalReserved} units committed to orders` : '100% available to promise'}
           </p>
         </div>
 
-        <div className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-sm">
+        <div className="bg-white p-4 rounded-lg border border-slate-200 shadow-[0_1px_2px_0_rgba(0,0,0,0.02)]">
           <div className="flex items-center justify-between text-slate-500">
             <span className="text-xs font-medium">Inventory Valuation</span>
-            <span className="p-1.5 rounded-lg bg-indigo-50 text-indigo-600">
+            <span className="p-1.5 rounded border border-indigo-200/60 bg-indigo-50 text-indigo-700">
               <IndianRupee className="w-4 h-4" />
             </span>
           </div>
           <div className="mt-2 flex items-baseline gap-2">
-            <span className="text-2xl font-bold text-slate-900">
+            <span className="text-2xl font-semibold text-slate-900 tracking-tight">
               ₹{metrics.totalValuation.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </span>
           </div>
           <p className="text-[11px] text-slate-500 mt-1">At active per-unit cost bases</p>
         </div>
 
-        <div className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-sm">
+        <div
+          onClick={() => setStatusFilter(statusFilter === 'ATTENTION' ? 'ALL' : 'ATTENTION')}
+          className={`p-4 rounded-lg border shadow-[0_1px_2px_0_rgba(0,0,0,0.02)] cursor-pointer transition-all ${
+            statusFilter === 'ATTENTION'
+              ? 'bg-amber-50/50 border-amber-300 ring-1 ring-amber-300'
+              : 'bg-white border-slate-200 hover:border-slate-300'
+          }`}
+          title="Click to toggle filter for all stock attention alerts"
+        >
           <div className="flex items-center justify-between text-slate-500">
             <span className="text-xs font-medium">Stock Attention Alerts</span>
-            <span className="p-1.5 rounded-lg bg-amber-50 text-amber-600">
+            <span className="p-1.5 rounded border border-amber-200/60 bg-amber-50 text-amber-700">
               <ShieldAlert className="w-4 h-4" />
             </span>
           </div>
           <div className="mt-2 flex items-baseline gap-2">
-            <span className="text-2xl font-bold text-amber-600">{metrics.lowStockCount + metrics.outOfStockCount}</span>
-            <span className="text-xs text-slate-400">SKU locations</span>
+            <span className="text-2xl font-semibold text-slate-900 tracking-tight">{metrics.totalAttentionCount}</span>
+            <span className="text-xs text-slate-500">SKU locations</span>
           </div>
-          <p className="text-[11px] text-slate-500 mt-1">
-            {metrics.outOfStockCount} depleted &bull; {metrics.lowStockCount} below minimum safety threshold
-          </p>
+          <div className="mt-2 pt-2 border-t border-slate-100 flex items-center gap-1.5 text-[11px] text-slate-500">
+            <span className={metrics.outOfStockCount > 0 ? "font-medium text-rose-600" : ""}>
+              {metrics.outOfStockCount} depleted
+            </span>
+            <span className="text-slate-300">&bull;</span>
+            <span className={metrics.lowStockCount > 0 ? "font-medium text-amber-700" : ""}>
+              {metrics.lowStockCount} below buffer threshold
+            </span>
+          </div>
         </div>
       </div>
 
       {/* Filter and Search Bar */}
-      <div className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-sm space-y-3">
-        <div className="flex flex-col md:flex-row gap-3">
+      <div className="bg-white p-3.5 rounded-lg border border-slate-200 shadow-[0_1px_2px_0_rgba(0,0,0,0.02)] space-y-3">
+        <div className="flex flex-col md:flex-row gap-2.5">
           {/* Search Box */}
           <div className="relative flex-1">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
             <input
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Search by Product Name, SKU, Category, Warehouse, or Location..."
-              className="w-full pl-9 pr-8 py-2 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-brand-500 focus:bg-white transition-all"
+              className="w-full pl-8 pr-8 py-1.5 text-xs bg-slate-50 hover:bg-slate-100/60 focus:bg-white border border-slate-200 rounded-md focus:outline-none focus:border-brand-600 focus:ring-1 focus:ring-brand-600 text-slate-800 transition-colors"
             />
             {searchTerm && (
               <button
@@ -516,13 +554,12 @@ export const StockView: React.FC<StockViewProps> = ({ onNavigateTab, externalSea
               </button>
             )}
           </div>
-
           {/* Category Filter */}
           <div className="w-full md:w-48">
             <select
               value={categoryFilter}
               onChange={(e) => setCategoryFilter(e.target.value)}
-              className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-brand-500"
+              className="w-full px-2.5 py-1.5 text-xs bg-slate-50 hover:bg-slate-100/60 border border-slate-200 rounded-md focus:outline-none focus:border-brand-600 text-slate-700"
             >
               <option value="">All Categories ({categories.length})</option>
               {categories.map((c) => (
@@ -538,7 +575,7 @@ export const StockView: React.FC<StockViewProps> = ({ onNavigateTab, externalSea
             <select
               value={locationFilter}
               onChange={(e) => setLocationFilter(e.target.value)}
-              className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-brand-500"
+              className="w-full px-2.5 py-1.5 text-xs bg-slate-50 hover:bg-slate-100/60 border border-slate-200 rounded-md focus:outline-none focus:border-brand-600 text-slate-700"
             >
               <option value="">All Warehouses & Locations</option>
               {warehouses.map((wh) => (
@@ -555,16 +592,17 @@ export const StockView: React.FC<StockViewProps> = ({ onNavigateTab, externalSea
           </div>
 
           {/* Status Filter */}
-          <div className="w-full md:w-44">
+          <div className="w-full md:w-56">
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value as any)}
-              className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-brand-500"
+              className="w-full px-2.5 py-1.5 text-xs bg-slate-50 hover:bg-slate-100/60 focus:bg-white border border-slate-200 rounded-md focus:outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-300 text-slate-700 transition-colors"
             >
-              <option value="ALL">All Stock Statuses</option>
+              <option value="ALL">All Stock Statuses ({stockRows.length})</option>
+              <option value="ATTENTION">Stock Alerts ({metrics.totalAttentionCount})</option>
+              <option value="LOW_STOCK">Below Buffer ({metrics.lowStockCount})</option>
+              <option value="OUT_OF_STOCK">Depleted (0 units) ({metrics.outOfStockCount})</option>
               <option value="IN_STOCK">In Stock (&gt; 0)</option>
-              <option value="LOW_STOCK">Low Stock Alert (&le; Buffer)</option>
-              <option value="OUT_OF_STOCK">Out of Stock (0 units)</option>
               <option value="RESERVED">Has Reserved Stock</option>
             </select>
           </div>
@@ -582,7 +620,7 @@ export const StockView: React.FC<StockViewProps> = ({ onNavigateTab, externalSea
                   setLocationFilter('');
                   setStatusFilter('ALL');
                 }}
-                className="text-brand-600 hover:text-brand-700 font-semibold underline ml-1"
+                className="text-brand-600 hover:text-brand-700 font-medium underline ml-1"
               >
                 Clear all filters
               </button>
@@ -591,26 +629,26 @@ export const StockView: React.FC<StockViewProps> = ({ onNavigateTab, externalSea
 
           {/* Sorting controls */}
           <div className="flex items-center gap-2">
-            <span className="text-slate-400">Sort by:</span>
-            <div className="inline-flex rounded-lg border border-slate-200 p-0.5 bg-slate-50 text-[11px]">
+            <span className="text-slate-500 text-[11px]">Sort by:</span>
+            <div className="inline-flex rounded-md border border-slate-200 p-0.5 bg-slate-50 text-[11px]">
               <button
                 onClick={() => {
                   if (sortBy === 'name') setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
                   else { setSortBy('name'); setSortOrder('asc'); }
                 }}
-                className={`px-2 py-1 rounded font-medium transition-colors ${
-                  sortBy === 'name' ? 'bg-white text-slate-900 shadow-sm font-semibold' : 'text-slate-600'
+                className={`px-2 py-0.5 rounded font-medium transition-colors ${
+                  sortBy === 'name' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600'
                 }`}
               >
-                Product {sortBy === 'name' && (sortOrder === 'asc' ? '↑' : '↓')}
+                Name {sortBy === 'name' && (sortOrder === 'asc' ? '↑' : '↓')}
               </button>
               <button
                 onClick={() => {
                   if (sortBy === 'onHand') setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
                   else { setSortBy('onHand'); setSortOrder('desc'); }
                 }}
-                className={`px-2 py-1 rounded font-medium transition-colors ${
-                  sortBy === 'onHand' ? 'bg-white text-slate-900 shadow-sm font-semibold' : 'text-slate-600'
+                className={`px-2 py-0.5 rounded font-medium transition-colors ${
+                  sortBy === 'onHand' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600'
                 }`}
               >
                 On Hand {sortBy === 'onHand' && (sortOrder === 'asc' ? '↑' : '↓')}
@@ -620,8 +658,8 @@ export const StockView: React.FC<StockViewProps> = ({ onNavigateTab, externalSea
                   if (sortBy === 'freeToUse') setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
                   else { setSortBy('freeToUse'); setSortOrder('desc'); }
                 }}
-                className={`px-2 py-1 rounded font-medium transition-colors ${
-                  sortBy === 'freeToUse' ? 'bg-white text-slate-900 shadow-sm font-semibold' : 'text-slate-600'
+                className={`px-2 py-0.5 rounded font-medium transition-colors ${
+                  sortBy === 'freeToUse' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600'
                 }`}
               >
                 Free to Use {sortBy === 'freeToUse' && (sortOrder === 'asc' ? '↑' : '↓')}
@@ -631,8 +669,8 @@ export const StockView: React.FC<StockViewProps> = ({ onNavigateTab, externalSea
                   if (sortBy === 'cost') setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
                   else { setSortBy('cost'); setSortOrder('desc'); }
                 }}
-                className={`px-2 py-1 rounded font-medium transition-colors ${
-                  sortBy === 'cost' ? 'bg-white text-slate-900 shadow-sm font-semibold' : 'text-slate-600'
+                className={`px-2 py-0.5 rounded font-medium transition-colors ${
+                  sortBy === 'cost' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600'
                 }`}
               >
                 Cost {sortBy === 'cost' && (sortOrder === 'asc' ? '↑' : '↓')}
@@ -643,20 +681,20 @@ export const StockView: React.FC<StockViewProps> = ({ onNavigateTab, externalSea
       </div>
 
       {/* Dedicated Stock Table */}
-      <div className="bg-white rounded-xl border border-slate-200/80 shadow-sm overflow-hidden">
+      <div className="bg-white rounded-lg border border-slate-200 shadow-[0_1px_2px_0_rgba(0,0,0,0.02)] overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
-            <thead className="bg-slate-50 text-slate-500 uppercase tracking-wider font-semibold border-b border-slate-100">
+            <thead className="bg-slate-50 text-slate-600 uppercase tracking-wider font-semibold border-b border-slate-200 text-[10px]">
               <tr>
-                <th className="px-5 py-3.5">Product</th>
-                <th className="px-5 py-3.5">SKU</th>
-                <th className="px-5 py-3.5">Category</th>
-                <th className="px-5 py-3.5">Warehouse / Location</th>
-                <th className="px-5 py-3.5 text-right">Per-Unit Cost</th>
-                <th className="px-5 py-3.5 text-right">On Hand</th>
-                <th className="px-5 py-3.5 text-right">Free to Use</th>
-                <th className="px-5 py-3.5 text-center">Status</th>
-                <th className="px-5 py-3.5 text-right">Stock Action</th>
+                <th className="px-4 py-2.5">Product</th>
+                <th className="px-4 py-2.5">SKU</th>
+                <th className="px-4 py-2.5">Category</th>
+                <th className="px-4 py-2.5">Warehouse / Location</th>
+                <th className="px-4 py-2.5 text-right">Per-Unit Cost</th>
+                <th className="px-4 py-2.5 text-right">On Hand</th>
+                <th className="px-4 py-2.5 text-right">Free to Use</th>
+                <th className="px-4 py-2.5 text-center">Status</th>
+                <th className="px-4 py-2.5 text-right">Stock Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -695,47 +733,47 @@ export const StockView: React.FC<StockViewProps> = ({ onNavigateTab, externalSea
                       }`}
                     >
                       {/* Product Name */}
-                      <td className="px-5 py-3.5">
+                      <td className="px-4 py-2.5">
                         <div className="font-semibold text-slate-900">{row.productName}</div>
-                        <div className="text-[11px] text-slate-400 mt-0.5">Alert buffer: &le; {row.minStockAlert} {row.uom}</div>
+                        <div className="text-[11px] text-slate-500 mt-0.5">Buffer: &le; {row.minStockAlert} {row.uom}</div>
                       </td>
 
                       {/* SKU */}
-                      <td className="px-5 py-3.5">
-                        <span className="font-mono text-[11px] px-2 py-0.5 rounded bg-slate-100 text-slate-700 font-medium border border-slate-200">
+                      <td className="px-4 py-2.5">
+                        <span className="font-mono text-[11px] text-slate-600 bg-slate-50 px-1.5 py-0.5 rounded border border-slate-200/80 font-normal">
                           {row.sku}
                         </span>
                       </td>
 
                       {/* Category */}
-                      <td className="px-5 py-3.5 text-slate-600">
-                        <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-slate-100/80 text-slate-700 text-[11px]">
+                      <td className="px-4 py-2.5 text-slate-600">
+                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-slate-100/70 text-slate-600 text-[11px] border border-slate-200/50">
                           <Tag className="w-3 h-3 text-slate-400" />
                           {row.categoryName}
                         </span>
                       </td>
 
                       {/* Warehouse / Location */}
-                      <td className="px-5 py-3.5">
+                      <td className="px-4 py-2.5">
                         <div className="flex items-start gap-1.5">
                           <MapPin className="w-3.5 h-3.5 text-slate-400 mt-0.5 shrink-0" />
                           <div>
                             <div className="font-medium text-slate-800">{row.warehouseName}</div>
-                            <div className="text-[11px] text-slate-500 font-mono">
-                              {row.locationName} {row.locationCode ? `[${row.locationCode}]` : ''}
+                            <div className="text-[11px] text-slate-500">
+                              {row.locationName} {row.locationCode ? `(${row.locationCode})` : ''}
                             </div>
                           </div>
                         </div>
                       </td>
 
                       {/* Per-Unit Cost */}
-                      <td className="px-5 py-3.5 text-right font-medium text-slate-800">
+                      <td className="px-4 py-2.5 text-right font-medium text-slate-800">
                         ₹{row.unitPrice.toFixed(2)}
                       </td>
 
                       {/* On Hand */}
-                      <td className="px-5 py-3.5 text-right">
-                        <div className="font-bold text-slate-900 text-sm">
+                      <td className="px-4 py-2.5 text-right">
+                        <div className="font-semibold text-slate-900">
                           {row.onHand.toLocaleString()} <span className="text-[11px] font-normal text-slate-400">{row.uom}</span>
                         </div>
                         {hasReservation && (
@@ -746,33 +784,33 @@ export const StockView: React.FC<StockViewProps> = ({ onNavigateTab, externalSea
                       </td>
 
                       {/* Free to Use */}
-                      <td className="px-5 py-3.5 text-right">
-                        <div className={`font-bold text-sm ${
+                      <td className="px-4 py-2.5 text-right">
+                        <div className={`font-semibold ${
                           row.freeToUse === 0
                             ? 'text-rose-600'
-                            : (row.freeToUse <= row.minStockAlert ? 'text-amber-600' : 'text-emerald-600')
+                            : (row.freeToUse <= row.minStockAlert ? 'text-amber-600' : 'text-emerald-700')
                         }`}>
                           {row.freeToUse.toLocaleString()} <span className="text-[11px] font-normal text-slate-400">{row.uom}</span>
                         </div>
                         <div className="text-[10px] text-slate-400">
-                          Ready to dispatch
+                          Available
                         </div>
                       </td>
 
                       {/* Status */}
-                      <td className="px-5 py-3.5 text-center">
+                      <td className="px-4 py-2.5 text-center">
                         <Badge status={row.stockStatus} />
                       </td>
 
                       {/* Action */}
-                      <td className="px-5 py-3.5 text-right">
+                      <td className="px-4 py-2.5 text-right">
                         <button
                           onClick={() => handleOpenRowAdjustment(row)}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-slate-100 text-slate-700 font-semibold rounded-lg border border-slate-200 text-xs shadow-xs hover:border-slate-300 transition-all"
+                          className="inline-flex items-center gap-1 px-2.5 py-1 bg-white hover:bg-slate-50 text-slate-700 font-medium rounded border border-slate-200 text-xs shadow-xs transition-colors"
                           title="Audit physical count & log adjustment"
                         >
-                          <SlidersHorizontal className="w-3.5 h-3.5 text-brand-600" />
-                          <span>Update Stock</span>
+                          <SlidersHorizontal className="w-3 h-3 text-slate-500" />
+                          <span>Update</span>
                         </button>
                       </td>
                     </tr>
@@ -945,12 +983,15 @@ export const StockView: React.FC<StockViewProps> = ({ onNavigateTab, externalSea
           </div>
 
           {/* Ledger Compliance Banner */}
-          <div className="p-3 bg-amber-50 rounded-lg border border-amber-200/70 text-[11px] text-amber-800 flex items-start gap-2">
-            <ShieldAlert className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-            <p>
-              <strong>Audit Ledger Policy:</strong> This operation creates a verifiable stock adjustment record and logs a permanent entry in the <strong>Stock Movement Ledger</strong> with timestamp, staff identity, and before/after balances.
-            </p>
-          </div>
+          <InfoBanner
+            icon={ShieldAlert}
+            title="Audit Ledger Policy"
+            description={
+              <>
+                This operation creates a verifiable stock adjustment record and logs a permanent entry in the <strong className="font-semibold text-slate-800">Stock Movement Ledger</strong> with timestamp, staff identity, and before/after balances.
+              </>
+            }
+          />
 
           {/* Modal Actions */}
           <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">

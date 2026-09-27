@@ -53,26 +53,38 @@ def get_dashboard_summary(
     low_stock_items: List[ProductOut] = []
 
     for p in products:
+        relevant_stock_levels = [
+            sl for sl in p.stock_levels
+            if target_loc_ids is None or sl.location_id in target_loc_ids
+        ]
+
         if target_loc_ids is not None:
-            prod_stock = sum(sl.quantity_on_hand for sl in p.stock_levels if sl.location_id in target_loc_ids)
+            prod_stock = sum(sl.quantity_on_hand for sl in relevant_stock_levels)
         else:
             prod_stock = sum(sl.quantity_on_hand for sl in p.stock_levels)
         
         total_units += prod_stock
 
-        st = "IN_STOCK"
-        if prod_stock == 0:
-            st = "OUT_OF_STOCK"
-            out_of_stock_count += 1
-        elif prod_stock <= p.min_stock_alert:
-            st = "LOW_STOCK"
-            low_stock_count += 1
+        has_low_location = False
+        has_out_location = False
 
-        if st in ["LOW_STOCK", "OUT_OF_STOCK"]:
-            relevant_stock_levels = [
-                sl for sl in p.stock_levels
-                if target_loc_ids is None or sl.location_id in target_loc_ids
-            ]
+        if relevant_stock_levels:
+            for sl in relevant_stock_levels:
+                if sl.quantity_on_hand == 0:
+                    out_of_stock_count += 1
+                    has_out_location = True
+                elif sl.quantity_on_hand <= p.min_stock_alert:
+                    low_stock_count += 1
+                    has_low_location = True
+        else:
+            if prod_stock == 0:
+                out_of_stock_count += 1
+                has_out_location = True
+            elif prod_stock <= p.min_stock_alert:
+                low_stock_count += 1
+                has_low_location = True
+
+        if has_low_location or has_out_location:
             p_out = ProductOut(
                 id=p.id,
                 name=p.name,
@@ -86,7 +98,7 @@ def get_dashboard_summary(
                 reorder_quantity=p.reorder_quantity,
                 description=p.description,
                 total_stock=prod_stock,
-                stock_status=st,
+                stock_status="OUT_OF_STOCK" if has_out_location else "LOW_STOCK",
                 created_at=p.created_at,
                 updated_at=p.updated_at,
                 stock_levels=[

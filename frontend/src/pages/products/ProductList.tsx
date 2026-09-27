@@ -3,6 +3,7 @@ import { api } from '../../services/api';
 import { Product, Category, Warehouse } from '../../types';
 import { Badge } from '../../components/common/Badge';
 import { Modal } from '../../components/common/Modal';
+import { InfoBanner } from '../../components/common/InfoBanner';
 import {
   Package, Plus, Search, MapPin, AlertCircle, CheckCircle, Tag, Boxes, ShieldAlert
 } from 'lucide-react';
@@ -135,43 +136,38 @@ export const ProductList: React.FC<ProductListProps> = ({ onNavigateTab, externa
     <div className="space-y-6">
       {/* RBAC Notice for non-managers */}
       {!isManager && (
-        <div className="p-3.5 bg-amber-50 rounded-xl border border-amber-200/80 text-amber-900 text-xs flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <ShieldAlert className="w-4 h-4 text-amber-600 shrink-0" />
-            <span>
-              <strong>Operational Catalog View:</strong> SKU registration, pricing, and reorder rule configurations are managed by Inventory Managers.
-            </span>
-          </div>
-          <span className="font-mono text-[10px] px-2 py-0.5 rounded bg-amber-100 font-semibold text-amber-800">
-            STAFF VIEW
-          </span>
-        </div>
+        <InfoBanner
+          icon={ShieldAlert}
+          title="Operational Catalog View"
+          description="SKU registration, pricing, and reorder rule configurations are managed by Inventory Managers."
+          badgeText="STAFF VIEW"
+        />
       )}
 
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-white p-5 rounded-xl border border-slate-200/80 shadow-sm">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-1">
         <div>
-          <h2 className="text-xl font-bold text-slate-900 tracking-tight">Product Catalog & Reordering</h2>
+          <h1 className="text-xl font-semibold text-slate-900 tracking-tight">Product Catalog & Reordering</h1>
           <p className="text-xs text-slate-500 mt-0.5">
             Manage SKU profiles, multi-location stock availability, and automated safety buffers
           </p>
         </div>
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-center gap-2">
           {onNavigateTab && (
             <button
               onClick={() => onNavigateTab('stock')}
-              className="inline-flex items-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-lg transition-colors border border-slate-200"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-slate-50 text-slate-700 text-xs font-medium rounded-md transition-colors border border-slate-200 shadow-xs"
             >
-              <Boxes className="w-4 h-4 text-brand-600" />
+              <Boxes className="w-3.5 h-3.5 text-slate-500" />
               <span>Dedicated Stock View</span>
             </button>
           )}
           {isManager && (
             <button
               onClick={() => setIsModalOpen(true)}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold rounded-lg shadow-sm transition-all"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-brand-600 hover:bg-brand-700 text-white text-xs font-medium rounded-md shadow-xs transition-colors"
             >
-              <Plus className="w-4 h-4" />
+              <Plus className="w-3.5 h-3.5" />
               <span>New Product SKU</span>
             </button>
           )}
@@ -179,15 +175,15 @@ export const ProductList: React.FC<ProductListProps> = ({ onNavigateTab, externa
       </div>
 
       {/* Search and Filters */}
-      <div className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-sm flex flex-wrap items-center justify-between gap-3 text-xs">
+      <div className="bg-white p-3.5 rounded-lg border border-slate-200 shadow-[0_1px_2px_0_rgba(0,0,0,0.02)] flex flex-wrap items-center justify-between gap-3 text-xs">
         <div className="relative flex-1 min-w-[240px]">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
           <input
             type="text"
             placeholder="Search by SKU code or product title..."
             value={searchTerm}
             onChange={(e) => handleSearchChange(e.target.value)}
-            className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-brand-500"
+            className="w-full pl-8 pr-3 py-1.5 bg-slate-50 hover:bg-slate-100/60 focus:bg-white border border-slate-200 focus:border-brand-600 focus:ring-1 focus:ring-brand-600 rounded-md text-slate-800 placeholder:text-slate-400 outline-none transition-colors"
           />
         </div>
 
@@ -195,7 +191,7 @@ export const ProductList: React.FC<ProductListProps> = ({ onNavigateTab, externa
           <select
             value={selectedCategory}
             onChange={(e) => setSelectedCategory(e.target.value)}
-            className="bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-700 focus:outline-none focus:ring-1 focus:ring-brand-500"
+            className="bg-slate-50 hover:bg-slate-100/60 border border-slate-200 rounded-md px-2.5 py-1.5 text-slate-700 focus:outline-none focus:border-brand-600 text-xs"
           >
             <option value="">All Categories</option>
             {categories.map((c) => (
@@ -206,7 +202,7 @@ export const ProductList: React.FC<ProductListProps> = ({ onNavigateTab, externa
           <select
             value={selectedStatus}
             onChange={(e) => setSelectedStatus(e.target.value)}
-            className="bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-700 focus:outline-none focus:ring-1 focus:ring-brand-500"
+            className="bg-slate-50 hover:bg-slate-100/60 border border-slate-200 rounded-md px-2.5 py-1.5 text-slate-700 focus:outline-none focus:border-brand-600 text-xs"
           >
             <option value="">All Stock Statuses</option>
             <option value="IN_STOCK">In Stock</option>
@@ -217,19 +213,19 @@ export const ProductList: React.FC<ProductListProps> = ({ onNavigateTab, externa
       </div>
 
       {/* Products Table */}
-      <div className="bg-white rounded-xl border border-slate-200/80 shadow-sm overflow-hidden">
+      <div className="bg-white rounded-lg border border-slate-200 shadow-[0_1px_2px_0_rgba(0,0,0,0.02)] overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
-            <thead className="bg-slate-50 text-slate-500 uppercase tracking-wider font-semibold border-b border-slate-100">
+            <thead className="bg-slate-50 text-slate-600 uppercase tracking-wider font-semibold border-b border-slate-200 text-[10px]">
               <tr>
-                <th className="px-5 py-3">Product Name & SKU</th>
-                <th className="px-5 py-3">Category</th>
-                <th className="px-5 py-3">UoM</th>
-                <th className="px-5 py-3 text-right">Unit Price</th>
-                <th className="px-5 py-3 text-right">Total On Hand</th>
-                <th className="px-5 py-3">Stock by Location</th>
-                <th className="px-5 py-3 text-right">Reorder Rule</th>
-                <th className="px-5 py-3 text-center">Status</th>
+                <th className="px-4 py-2.5">Product Name & SKU</th>
+                <th className="px-4 py-2.5">Category</th>
+                <th className="px-4 py-2.5">UoM</th>
+                <th className="px-4 py-2.5 text-right">Unit Price</th>
+                <th className="px-4 py-2.5 text-right">Total On Hand</th>
+                <th className="px-4 py-2.5">Stock by Location</th>
+                <th className="px-4 py-2.5 text-right">Reorder Rule</th>
+                <th className="px-4 py-2.5 text-center">Status</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -243,43 +239,43 @@ export const ProductList: React.FC<ProductListProps> = ({ onNavigateTab, externa
                 </tr>
               ) : (
                 filteredProducts.map((p) => (
-                  <tr key={p.id} className="hover:bg-slate-50/70 transition-colors">
-                    <td className="px-5 py-3.5">
-                      <div className="font-semibold text-slate-900">{p.name}</div>
-                      <div className="font-mono text-[11px] text-slate-400 mt-0.5">{p.sku}</div>
+                  <tr key={p.id} className="hover:bg-slate-50/60 transition-colors">
+                    <td className="px-4 py-2.5">
+                      <div className="font-medium text-slate-900">{p.name}</div>
+                      <div className="font-mono text-[11px] text-slate-500 mt-0.5">{p.sku}</div>
                     </td>
-                    <td className="px-5 py-3.5 text-slate-600">
-                      <span className="inline-flex items-center gap-1 bg-slate-100 px-2 py-0.5 rounded text-[11px]">
+                    <td className="px-4 py-2.5 text-slate-600">
+                      <span className="inline-flex items-center gap-1 bg-slate-100 px-2 py-0.5 rounded text-[11px] border border-slate-200/60">
                         <Tag className="w-3 h-3 text-slate-400" />
                         {p.category_name}
                       </span>
                     </td>
-                    <td className="px-5 py-3.5 text-slate-600">{p.uom}</td>
-                    <td className="px-5 py-3.5 text-right font-medium text-slate-900">
+                    <td className="px-4 py-2.5 text-slate-600">{p.uom}</td>
+                    <td className="px-4 py-2.5 text-right font-medium text-slate-900">
                       ₹{Number(p.unit_price).toFixed(2)}
                     </td>
-                    <td className="px-5 py-3.5 text-right font-bold text-slate-900 text-sm">
+                    <td className="px-4 py-2.5 text-right font-semibold text-slate-900">
                       {p.total_stock}
                     </td>
-                    <td className="px-5 py-3.5">
+                    <td className="px-4 py-2.5">
                       <div className="space-y-1 max-w-xs">
                         {p.stock_levels.length === 0 ? (
                           <span className="text-[11px] text-slate-400 italic">No assigned location</span>
                         ) : (
                           p.stock_levels.map((sl, idx) => (
-                            <div key={idx} className="flex items-center justify-between text-[11px] bg-slate-50 px-2 py-0.5 rounded border border-slate-100">
+                            <div key={idx} className="flex items-center justify-between text-[11px] bg-slate-50 px-2 py-0.5 rounded border border-slate-200/60">
                               <span className="text-slate-600 truncate">{sl.location_name || sl.location_code}</span>
-                              <span className="font-bold text-slate-800 ml-2">{sl.quantity_on_hand}</span>
+                              <span className="font-medium text-slate-800 ml-2">{sl.quantity_on_hand}</span>
                             </div>
                           ))
                         )}
                       </div>
                     </td>
-                    <td className="px-5 py-3.5 text-right">
-                      <div className="text-[11px] text-slate-500">Alert at &le; <span className="font-semibold text-slate-700">{p.min_stock_alert}</span></div>
-                      <div className="text-[11px] text-brand-600 font-medium">Reorder +{p.reorder_quantity}</div>
+                    <td className="px-4 py-2.5 text-right">
+                      <div className="text-[11px] text-slate-500">Alert &le; <span className="font-medium text-slate-700">{p.min_stock_alert}</span></div>
+                      <div className="text-[11px] text-brand-700 font-medium">Reorder +{p.reorder_quantity}</div>
                     </td>
-                    <td className="px-5 py-3.5 text-center">
+                    <td className="px-4 py-2.5 text-center">
                       <Badge status={p.stock_status} />
                     </td>
                   </tr>
@@ -299,38 +295,38 @@ export const ProductList: React.FC<ProductListProps> = ({ onNavigateTab, externa
         maxWidth="xl"
       >
         <form onSubmit={handleCreateProduct} className="space-y-4 text-xs">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
             <div>
-              <label className="block font-semibold text-slate-700 mb-1">Product Title *</label>
+              <label className="block font-medium text-slate-700 mb-1">Product Title *</label>
               <input
                 type="text"
                 required
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="e.g. Wireless Barcode Gun"
-                className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-brand-500"
+                className="w-full px-3 py-1.5 border border-slate-200 rounded-md focus:outline-none focus:border-brand-600 focus:ring-1 focus:ring-brand-600"
               />
             </div>
             <div>
-              <label className="block font-semibold text-slate-700 mb-1">SKU / Code *</label>
+              <label className="block font-medium text-slate-700 mb-1">SKU / Code *</label>
               <input
                 type="text"
                 required
                 value={sku}
                 onChange={(e) => setSku(e.target.value.toUpperCase())}
                 placeholder="e.g. SS-WAND-002"
-                className="w-full font-mono uppercase px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-brand-500"
+                className="w-full font-mono uppercase px-3 py-1.5 border border-slate-200 rounded-md focus:outline-none focus:border-brand-600 focus:ring-1 focus:ring-brand-600"
               />
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
             <div>
-              <label className="block font-semibold text-slate-700 mb-1">Category</label>
+              <label className="block font-medium text-slate-700 mb-1">Category</label>
               <select
                 value={categoryId}
                 onChange={(e) => setCategoryId(e.target.value)}
-                className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-brand-500"
+                className="w-full px-3 py-1.5 border border-slate-200 rounded-md focus:outline-none focus:border-brand-600 focus:ring-1 focus:ring-brand-600 bg-white"
               >
                 <option value="">Select Category</option>
                 {categories.map((c) => (
@@ -339,11 +335,11 @@ export const ProductList: React.FC<ProductListProps> = ({ onNavigateTab, externa
               </select>
             </div>
             <div>
-              <label className="block font-semibold text-slate-700 mb-1">Unit of Measure (UoM)</label>
+              <label className="block font-medium text-slate-700 mb-1">Unit of Measure (UoM)</label>
               <select
                 value={uom}
                 onChange={(e) => setUom(e.target.value)}
-                className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-brand-500"
+                className="w-full px-3 py-1.5 border border-slate-200 rounded-md focus:outline-none focus:border-brand-600 focus:ring-1 focus:ring-brand-600 bg-white"
               >
                 <option value="Units">Units (Pcs)</option>
                 <option value="Boxes">Boxes</option>
@@ -354,35 +350,35 @@ export const ProductList: React.FC<ProductListProps> = ({ onNavigateTab, externa
               </select>
             </div>
             <div>
-              <label className="block font-semibold text-slate-700 mb-1">Unit Price (₹)</label>
+              <label className="block font-medium text-slate-700 mb-1">Unit Price (₹)</label>
               <input
                 type="number"
                 step="0.01"
                 min="0"
                 value={unitPrice}
                 onChange={(e) => setUnitPrice(e.target.value)}
-                className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-brand-500"
+                className="w-full px-3 py-1.5 border border-slate-200 rounded-md focus:outline-none focus:border-brand-600 focus:ring-1 focus:ring-brand-600"
               />
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-3.5 bg-slate-50 rounded-xl border border-slate-200/80">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 p-3 bg-slate-50 rounded-md border border-slate-200">
             <div>
-              <label className="block font-semibold text-slate-700 mb-1">Initial Stock Quantity</label>
+              <label className="block font-medium text-slate-700 mb-1">Initial Stock Quantity</label>
               <input
                 type="number"
                 min="0"
                 value={initialStock}
                 onChange={(e) => setInitialStock(e.target.value)}
-                className="w-full px-3 py-2 border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-1 focus:ring-brand-500"
+                className="w-full px-3 py-1.5 border border-slate-200 rounded-md bg-white focus:outline-none focus:border-brand-600 focus:ring-1 focus:ring-brand-600"
               />
             </div>
             <div>
-              <label className="block font-semibold text-slate-700 mb-1">Initial Location Storage</label>
+              <label className="block font-medium text-slate-700 mb-1">Initial Location Storage</label>
               <select
                 value={initialLocationId}
                 onChange={(e) => setInitialLocationId(e.target.value)}
-                className="w-full px-3 py-2 border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-1 focus:ring-brand-500"
+                className="w-full px-3 py-1.5 border border-slate-200 rounded-md bg-white focus:outline-none focus:border-brand-600 focus:ring-1 focus:ring-brand-600"
               >
                 <option value="">Select Storage Location</option>
                 {allLocations.map((l) => (
@@ -392,39 +388,39 @@ export const ProductList: React.FC<ProductListProps> = ({ onNavigateTab, externa
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
             <div>
-              <label className="block font-semibold text-slate-700 mb-1">Minimum Alert Buffer</label>
+              <label className="block font-medium text-slate-700 mb-1">Minimum Alert Buffer</label>
               <input
                 type="number"
                 min="0"
                 value={minAlert}
                 onChange={(e) => setMinAlert(e.target.value)}
-                className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-brand-500"
+                className="w-full px-3 py-1.5 border border-slate-200 rounded-md focus:outline-none focus:border-brand-600 focus:ring-1 focus:ring-brand-600"
               />
-              <p className="text-[10px] text-slate-400 mt-1">Triggers low-stock warning when on-hand falls below</p>
+              <p className="text-[10px] text-slate-500 mt-1">Triggers low-stock warning when on-hand falls below</p>
             </div>
             <div>
-              <label className="block font-semibold text-slate-700 mb-1">Suggested Reorder Quantity</label>
+              <label className="block font-medium text-slate-700 mb-1">Suggested Reorder Quantity</label>
               <input
                 type="number"
                 min="1"
                 value={reorderQty}
                 onChange={(e) => setReorderQty(e.target.value)}
-                className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-brand-500"
+                className="w-full px-3 py-1.5 border border-slate-200 rounded-md focus:outline-none focus:border-brand-600 focus:ring-1 focus:ring-brand-600"
               />
-              <p className="text-[10px] text-slate-400 mt-1">Default lot size for new purchase receipts</p>
+              <p className="text-[10px] text-slate-500 mt-1">Default lot size for new purchase receipts</p>
             </div>
           </div>
 
           <div>
-            <label className="block font-semibold text-slate-700 mb-1">Description & Storage Notes</label>
+            <label className="block font-medium text-slate-700 mb-1">Description & Storage Notes</label>
             <textarea
               rows={2}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="e.g. Keep in humidity-controlled container, fragile glass lens..."
-              className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-brand-500"
+              className="w-full px-3 py-1.5 border border-slate-200 rounded-md focus:outline-none focus:border-brand-600 focus:ring-1 focus:ring-brand-600"
             />
           </div>
 
@@ -432,14 +428,14 @@ export const ProductList: React.FC<ProductListProps> = ({ onNavigateTab, externa
             <button
               type="button"
               onClick={() => setIsModalOpen(false)}
-              className="px-4 py-2 border border-slate-200 text-slate-700 rounded-lg hover:bg-slate-50 font-medium"
+              className="px-3.5 py-1.5 border border-slate-200 text-slate-700 rounded-md hover:bg-slate-50 font-medium transition-colors"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={submitting}
-              className="px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-lg font-semibold shadow-sm transition-all"
+              className="px-3.5 py-1.5 bg-brand-600 hover:bg-brand-700 text-white rounded-md font-medium shadow-xs transition-colors"
             >
               {submitting ? 'Registering...' : 'Save Product & Allocate'}
             </button>

@@ -115,8 +115,39 @@ export const api = {
     // Dynamic mock summary fallback
     const totalProducts = mockStore.products.length;
     const totalUnits = mockStore.products.reduce((acc, p) => acc + p.total_stock, 0);
-    const lowStock = mockStore.products.filter(p => p.stock_status === 'LOW_STOCK');
-    const outOfStock = mockStore.products.filter(p => p.stock_status === 'OUT_OF_STOCK');
+    let lowStockCount = 0;
+    let outOfStockCount = 0;
+    const attentionProds: Product[] = [];
+
+    mockStore.products.forEach((p) => {
+      let isProdLow = false;
+      let isProdOut = false;
+      if (p.stock_levels && p.stock_levels.length > 0) {
+        p.stock_levels.forEach((sl) => {
+          const onHand = Number(sl.quantity_on_hand) || 0;
+          if (onHand === 0) {
+            outOfStockCount++;
+            isProdOut = true;
+          } else if (onHand <= p.min_stock_alert) {
+            lowStockCount++;
+            isProdLow = true;
+          }
+        });
+      } else {
+        const onHand = Number(p.total_stock) || 0;
+        if (onHand === 0) {
+          outOfStockCount++;
+          isProdOut = true;
+        } else if (onHand <= p.min_stock_alert) {
+          lowStockCount++;
+          isProdLow = true;
+        }
+      }
+      if (isProdLow || isProdOut) {
+        attentionProds.push(p);
+      }
+    });
+
     const pendingReceipts = mockStore.receipts.filter(r => ['DRAFT', 'READY'].includes(r.status)).length;
     const pendingDeliveries = mockStore.deliveries.filter(d => ['DRAFT', 'WAITING', 'READY', 'PICKING', 'PACKING'].includes(d.status)).length;
 
@@ -124,8 +155,8 @@ export const api = {
       kpis: {
         total_products: totalProducts,
         total_units_in_stock: totalUnits,
-        low_stock_count: lowStock.length,
-        out_of_stock_count: outOfStock.length,
+        low_stock_count: lowStockCount,
+        out_of_stock_count: outOfStockCount,
         pending_receipts: pendingReceipts,
         pending_deliveries: pendingDeliveries,
         scheduled_transfers: mockStore.transfers.filter(t => t.status === 'SCHEDULED').length,
@@ -134,7 +165,7 @@ export const api = {
         late_operations: 0,
         waiting_operations: mockStore.deliveries.filter(d => d.status === 'WAITING').length
       },
-      low_stock_items: [...lowStock, ...outOfStock],
+      low_stock_items: attentionProds,
       category_distribution: mockStore.categories.map(c => {
         const prods = mockStore.products.filter(p => p.category_id === c.id);
         return {

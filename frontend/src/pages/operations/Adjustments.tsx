@@ -81,7 +81,7 @@ export const Adjustments: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-white p-5 rounded-xl border border-slate-200/80 shadow-sm">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-1">
         <div>
           <h2 className="text-xl font-bold text-slate-900 tracking-tight">Stock Adjustments & Physical Audits</h2>
           <p className="text-xs text-slate-500 mt-0.5">
@@ -90,7 +90,7 @@ export const Adjustments: React.FC = () => {
         </div>
         <button
           onClick={() => setIsModalOpen(true)}
-          className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold rounded-lg shadow-sm transition-all"
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold rounded-lg shadow-[0_1px_2px_0_rgba(0,0,0,0.05)] transition-all"
         >
           <Plus className="w-4 h-4" />
           <span>New Stock Count Adjustment</span>
@@ -98,44 +98,44 @@ export const Adjustments: React.FC = () => {
       </div>
 
       {/* Adjustments Table */}
-      <div className="bg-white rounded-xl border border-slate-200/80 shadow-sm overflow-hidden">
+      <div className="bg-white rounded-lg border border-slate-200 shadow-[0_1px_2px_0_rgba(0,0,0,0.02)] overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
-            <thead className="bg-slate-50 text-slate-500 uppercase tracking-wider font-semibold border-b border-slate-100">
+            <thead className="bg-slate-50 text-slate-600 uppercase tracking-wider font-semibold border-b border-slate-200 text-[10px]">
               <tr>
-                <th className="px-5 py-3">Adjustment #</th>
-                <th className="px-5 py-3">Product Name & SKU</th>
-                <th className="px-5 py-3">Audited Location</th>
-                <th className="px-5 py-3 text-right">System Recorded</th>
-                <th className="px-5 py-3 text-right">Physical Count</th>
-                <th className="px-5 py-3 text-right">Discrepancy (&Delta;)</th>
-                <th className="px-5 py-3">Reason / Justification</th>
-                <th className="px-5 py-3 text-right">Auditor</th>
+                <th className="px-4 py-2.5">Adjustment #</th>
+                <th className="px-4 py-2.5">Product Name & SKU</th>
+                <th className="px-4 py-2.5">Audited Location</th>
+                <th className="px-4 py-2.5 text-right">System Recorded</th>
+                <th className="px-4 py-2.5 text-right">Physical Count</th>
+                <th className="px-4 py-2.5 text-right">Discrepancy (&Delta;)</th>
+                <th className="px-4 py-2.5">Reason / Justification</th>
+                <th className="px-4 py-2.5 text-right">Auditor</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {loading ? (
                 <tr>
-                  <td colSpan={8} className="px-5 py-8 text-center text-slate-400">Loading adjustments...</td>
+                  <td colSpan={8} className="px-4 py-8 text-center text-slate-400">Loading adjustments...</td>
                 </tr>
               ) : adjustments.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-5 py-8 text-center text-slate-400">
+                  <td colSpan={8} className="px-4 py-8 text-center text-slate-400">
                     No physical count adjustments recorded yet.
                   </td>
                 </tr>
               ) : (
                 adjustments.map((adj) => (
                   <tr key={adj.id} className="hover:bg-slate-50/70 transition-colors">
-                    <td className="px-5 py-3.5 font-mono text-slate-700 font-semibold">{adj.adjustment_number}</td>
-                    <td className="px-5 py-3.5">
+                    <td className="px-4 py-2.5 font-mono text-slate-700 font-semibold">{adj.adjustment_number}</td>
+                    <td className="px-4 py-2.5">
                       <div className="font-semibold text-slate-900">{adj.product_name}</div>
                       <div className="font-mono text-[11px] text-slate-400">{adj.product_sku}</div>
                     </td>
-                    <td className="px-5 py-3.5 text-slate-600">{adj.location_name || 'Warehouse Zone'}</td>
-                    <td className="px-5 py-3.5 text-right font-medium text-slate-600">{adj.recorded_qty}</td>
-                    <td className="px-5 py-3.5 text-right font-bold text-slate-900">{adj.counted_qty}</td>
-                    <td className="px-5 py-3.5 text-right font-bold">
+                    <td className="px-4 py-2.5 text-slate-600">{adj.location_name || 'Warehouse Zone'}</td>
+                    <td className="px-4 py-2.5 text-right font-medium text-slate-600">{adj.recorded_qty}</td>
+                    <td className="px-4 py-2.5 text-right font-bold text-slate-900">{adj.counted_qty}</td>
+                    <td className="px-4 py-2.5 text-right font-bold">
                       <span
                         className={`inline-block px-2 py-0.5 rounded text-[11px] ${
                           adj.diff_qty > 0
@@ -148,11 +148,11 @@ export const Adjustments: React.FC = () => {
                         {adj.diff_qty > 0 ? `+${adj.diff_qty}` : adj.diff_qty}
                       </span>
                     </td>
-                    <td className="px-5 py-3.5 text-slate-700">
+                    <td className="px-4 py-2.5 text-slate-700">
                       <div>{adj.reason}</div>
                       {adj.notes && <div className="text-[11px] text-slate-400">{adj.notes}</div>}
                     </td>
-                    <td className="px-5 py-3.5 text-right text-slate-500 font-medium">
+                    <td className="px-4 py-2.5 text-right text-slate-500 font-medium">
                       {adj.adjusted_by || 'Alex Morgan'}
                     </td>
                   </tr>
@@ -178,7 +178,7 @@ export const Adjustments: React.FC = () => {
               required
               value={selectedProductId}
               onChange={(e) => setSelectedProductId(e.target.value)}
-              className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-amber-500"
+              className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-brand-500"
             >
               <option value="">Choose item to audit...</option>
               {products.map(p => (
@@ -193,7 +193,7 @@ export const Adjustments: React.FC = () => {
               required
               value={selectedLocationId}
               onChange={(e) => setSelectedLocationId(e.target.value)}
-              className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-amber-500"
+              className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-brand-500"
             >
               <option value="">Choose audited location...</option>
               {allLocations.map(l => (
@@ -203,9 +203,9 @@ export const Adjustments: React.FC = () => {
           </div>
 
           {/* Real-time Delta Visualizer */}
-          <div className="grid grid-cols-3 gap-3 p-3.5 bg-slate-50 rounded-xl border border-slate-200/80 text-center">
+          <div className="grid grid-cols-3 gap-3 p-3 bg-slate-50 rounded-lg border border-slate-200 text-center">
             <div>
-              <span className="text-[10px] uppercase font-semibold text-slate-400">System Recorded</span>
+              <span className="text-[10px] uppercase font-semibold text-slate-500">System Recorded</span>
               <p className="text-xl font-bold text-slate-700 mt-1">{recordedQty}</p>
             </div>
             <div>
@@ -216,11 +216,11 @@ export const Adjustments: React.FC = () => {
                 required
                 value={countedQty}
                 onChange={(e) => setCountedQty(e.target.value)}
-                className="w-full text-center font-bold text-xl py-1 mt-1 bg-white border border-slate-300 rounded-lg focus:ring-1 focus:ring-amber-500 text-slate-900"
+                className="w-full text-center font-bold text-xl py-1 mt-1 bg-white border border-slate-300 rounded-lg focus:ring-1 focus:ring-brand-500 text-slate-900"
               />
             </div>
             <div>
-              <span className="text-[10px] uppercase font-semibold text-slate-400">Calculated Variance</span>
+              <span className="text-[10px] uppercase font-semibold text-slate-500">Calculated Variance</span>
               <p className={`text-xl font-bold mt-1 ${diff > 0 ? 'text-emerald-600' : diff < 0 ? 'text-rose-600' : 'text-slate-600'}`}>
                 {diff > 0 ? `+${diff}` : diff}
               </p>
@@ -232,7 +232,7 @@ export const Adjustments: React.FC = () => {
             <select
               value={reason}
               onChange={(e) => setReason(e.target.value)}
-              className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-amber-500"
+              className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-brand-500"
             >
               <option value="Cycle Count Discrepancy">Cycle Count Discrepancy</option>
               <option value="Damaged Stock Write-off">Damaged Stock Write-off</option>
@@ -250,7 +250,7 @@ export const Adjustments: React.FC = () => {
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               placeholder="e.g. Recounted by Shift Supervisor, verified pallet seal intact."
-              className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-amber-500"
+              className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-brand-500"
             />
           </div>
 
@@ -258,14 +258,14 @@ export const Adjustments: React.FC = () => {
             <button
               type="button"
               onClick={() => setIsModalOpen(false)}
-              className="px-4 py-2 border border-slate-200 text-slate-700 rounded-lg hover:bg-slate-50 font-medium"
+              className="px-3.5 py-1.5 border border-slate-200 text-slate-700 rounded-lg hover:bg-slate-50 font-medium"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={submitting}
-              className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-semibold shadow-sm transition-all"
+              className="px-3.5 py-1.5 bg-brand-600 hover:bg-brand-700 text-white rounded-lg font-semibold shadow-xs transition-all"
             >
               {submitting ? 'Applying Adjustment...' : 'Apply Count & Write to Ledger'}
             </button>

@@ -4,6 +4,7 @@ import { Receipt, Product, Warehouse } from '../../types';
 import { useAuth } from '../../context/AuthContext';
 import { Badge } from '../../components/common/Badge';
 import { Modal } from '../../components/common/Modal';
+import { KanbanBoardContainer } from '../../components/common/KanbanBoardContainer';
 import { PrintDocumentModal } from '../../components/operations/PrintDocumentModal';
 import {
   Truck, Plus, CheckCircle2, Calendar, FileText, Trash2, XCircle,
@@ -215,21 +216,21 @@ export const Receipts: React.FC<ReceiptsProps> = ({ initialProductToReceive }) =
     return (
       <div className="space-y-6">
         {/* Navigation & Action Bar */}
-        <div className="bg-white p-5 rounded-xl border border-slate-200/80 shadow-sm flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div className="bg-white p-4 rounded-lg border border-slate-200 shadow-[0_1px_2px_0_rgba(0,0,0,0.02)] flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div className="flex items-center gap-3">
             <button
               onClick={() => setSelectedReceiptId(null)}
-              className="p-2 border border-slate-200 hover:bg-slate-100 rounded-lg text-slate-600 transition-colors"
+              className="p-1.5 border border-slate-200 hover:bg-slate-50 rounded-lg text-slate-600 transition-colors"
               title="Back to Receipt List"
             >
               <ArrowLeft className="w-4 h-4" />
             </button>
             <div>
               <div className="flex items-center gap-2.5">
-                <span className="font-mono text-lg font-black text-slate-900">{selectedReceipt.receipt_number}</span>
+                <span className="font-mono text-base font-bold text-slate-900">{selectedReceipt.receipt_number}</span>
                 <Badge status={selectedReceipt.status} size="md" />
                 {late && (
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-bold bg-rose-100 text-rose-700">
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-200">
                     <Clock className="w-3 h-3" />
                     <span>LATE OPERATION</span>
                   </span>
@@ -245,9 +246,9 @@ export const Receipts: React.FC<ReceiptsProps> = ({ initialProductToReceive }) =
           </div>
 
           {/* Workflow Status Progression & Actions */}
-          <div className="flex flex-wrap items-center gap-3">
+          <div className="flex flex-wrap items-center gap-2.5">
             {/* Status progression indicator */}
-            <div className="hidden sm:flex items-center gap-1 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium text-slate-600">
+            <div className="hidden sm:flex items-center gap-1 px-2.5 py-1 bg-slate-50 border border-slate-200 rounded text-xs font-medium text-slate-600">
               <span className={selectedReceipt.status === 'DRAFT' ? 'font-bold text-slate-900' : 'text-slate-400'}>Draft</span>
               <ChevronRight className="w-3 h-3 text-slate-300" />
               <span className={selectedReceipt.status === 'READY' ? 'font-bold text-blue-700' : selectedReceipt.status === 'DONE' ? 'text-slate-500' : 'text-slate-300'}>Ready</span>
@@ -261,7 +262,7 @@ export const Receipts: React.FC<ReceiptsProps> = ({ initialProductToReceive }) =
                 <button
                   onClick={() => handleMarkReady(selectedReceipt.id)}
                   disabled={processingId === selectedReceipt.id}
-                  className="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg text-xs shadow-sm transition-all disabled:opacity-60"
+                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg text-xs shadow-xs transition-all disabled:opacity-60"
                 >
                   <PackageCheck className="w-4 h-4" />
                   <span>{processingId === selectedReceipt.id ? 'Processing...' : 'Mark Ready'}</span>
@@ -269,7 +270,7 @@ export const Receipts: React.FC<ReceiptsProps> = ({ initialProductToReceive }) =
                 <button
                   onClick={() => handleCancelReceipt(selectedReceipt.id)}
                   disabled={processingId === selectedReceipt.id}
-                  className="inline-flex items-center gap-1.5 px-3 py-2 text-slate-600 hover:text-rose-600 hover:bg-rose-50 border border-slate-200 rounded-lg text-xs transition-colors disabled:opacity-60"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-lg text-xs font-semibold transition-colors disabled:opacity-60"
                 >
                   <XCircle className="w-4 h-4" />
                   <span>Cancel Receipt</span>
@@ -282,7 +283,7 @@ export const Receipts: React.FC<ReceiptsProps> = ({ initialProductToReceive }) =
                 <button
                   onClick={() => handleValidateReceipt(selectedReceipt.id)}
                   disabled={processingId === selectedReceipt.id}
-                  className="inline-flex items-center gap-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-lg text-xs shadow-sm transition-all disabled:opacity-60"
+                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-brand-600 hover:bg-brand-700 text-white font-semibold rounded-lg text-xs shadow-xs transition-all disabled:opacity-60"
                 >
                   <CheckCircle2 className="w-4 h-4" />
                   <span>{processingId === selectedReceipt.id ? 'Updating Stock...' : 'Validate & Receive'}</span>
@@ -290,7 +291,7 @@ export const Receipts: React.FC<ReceiptsProps> = ({ initialProductToReceive }) =
                 <button
                   onClick={() => handleCancelReceipt(selectedReceipt.id)}
                   disabled={processingId === selectedReceipt.id}
-                  className="inline-flex items-center gap-1.5 px-3 py-2 text-slate-600 hover:text-rose-600 hover:bg-rose-50 border border-slate-200 rounded-lg text-xs transition-colors disabled:opacity-60"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-lg text-xs font-semibold transition-colors disabled:opacity-60"
                 >
                   <XCircle className="w-4 h-4" />
                   <span>Cancel Receipt</span>
@@ -301,7 +302,7 @@ export const Receipts: React.FC<ReceiptsProps> = ({ initialProductToReceive }) =
             {selectedReceipt.status === 'DONE' && (
               <button
                 onClick={() => setPrintReceipt(selectedReceipt)}
-                className="inline-flex items-center gap-1.5 px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white font-semibold rounded-lg text-xs shadow-sm transition-all"
+                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-slate-850 hover:bg-slate-900 text-white font-semibold rounded-lg text-xs shadow-xs transition-all"
               >
                 <Printer className="w-4 h-4" />
                 <span>Print Goods Receipt</span>
@@ -320,14 +321,14 @@ export const Receipts: React.FC<ReceiptsProps> = ({ initialProductToReceive }) =
         )}
 
         {/* Metadata Details Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-sm">
-            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Receive From (Supplier)</span>
-            <span className="text-sm font-bold text-slate-900">{selectedReceipt.supplier_name}</span>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+          <div className="bg-white p-3.5 rounded-lg border border-slate-200 shadow-[0_1px_2px_0_rgba(0,0,0,0.02)]">
+            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">Receive From (Supplier)</span>
+            <span className="text-sm font-semibold text-slate-900">{selectedReceipt.supplier_name}</span>
           </div>
 
-          <div className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-sm">
-            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Scheduled Date</span>
+          <div className="bg-white p-3.5 rounded-lg border border-slate-200 shadow-[0_1px_2px_0_rgba(0,0,0,0.02)]">
+            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">Scheduled Date</span>
             <div className="flex items-center gap-1.5">
               <Calendar className="w-3.5 h-3.5 text-slate-400" />
               <span className={`text-sm font-semibold ${late ? 'text-rose-600' : 'text-slate-800'}`}>
@@ -336,8 +337,8 @@ export const Receipts: React.FC<ReceiptsProps> = ({ initialProductToReceive }) =
             </div>
           </div>
 
-          <div className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-sm">
-            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Responsible User</span>
+          <div className="bg-white p-3.5 rounded-lg border border-slate-200 shadow-[0_1px_2px_0_rgba(0,0,0,0.02)]">
+            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">Responsible User</span>
             <div className="flex items-center gap-1.5">
               <UserIcon className="w-3.5 h-3.5 text-slate-400" />
               <span className="text-sm font-semibold text-slate-800">
@@ -346,8 +347,8 @@ export const Receipts: React.FC<ReceiptsProps> = ({ initialProductToReceive }) =
             </div>
           </div>
 
-          <div className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-sm">
-            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Receipt Date / Validation</span>
+          <div className="bg-white p-3.5 rounded-lg border border-slate-200 shadow-[0_1px_2px_0_rgba(0,0,0,0.02)]">
+            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">Receipt Date / Validation</span>
             <span className="text-xs text-slate-700 block">
               Logged: {formatDate(selectedReceipt.receipt_date)}
             </span>
@@ -360,29 +361,29 @@ export const Receipts: React.FC<ReceiptsProps> = ({ initialProductToReceive }) =
         </div>
 
         {selectedReceipt.notes && (
-          <div className="bg-amber-50/60 border border-amber-200/70 p-3.5 rounded-xl text-xs text-amber-900">
-            <strong>Notes / Order Reference:</strong> {selectedReceipt.notes}
+          <div className="bg-slate-50 border border-slate-200 p-3 rounded-lg text-xs text-slate-700">
+            <strong className="font-semibold text-slate-800">Notes / Order Reference:</strong> <span className="text-slate-600">{selectedReceipt.notes}</span>
           </div>
         )}
 
         {/* Product Line Items */}
-        <div className="bg-white rounded-xl border border-slate-200/80 shadow-sm overflow-hidden">
-          <div className="p-4 border-b border-slate-100 flex items-center justify-between">
-            <h3 className="text-sm font-bold text-slate-900">Received Line Items ({selectedReceipt.items.length})</h3>
-            <span className="text-xs font-semibold text-slate-500">Total Units: {totalQty}</span>
+        <div className="bg-white rounded-lg border border-slate-200 shadow-[0_1px_2px_0_rgba(0,0,0,0.02)] overflow-hidden">
+          <div className="px-4 py-3 border-b border-slate-200 flex items-center justify-between">
+            <h3 className="text-xs font-semibold text-slate-900 uppercase tracking-wider">Received Line Items ({selectedReceipt.items.length})</h3>
+            <span className="text-xs font-medium text-slate-500">Total Units: <strong className="text-slate-800">{totalQty}</strong></span>
           </div>
 
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs border-collapse">
-              <thead className="bg-slate-50 text-slate-500 font-semibold uppercase text-[10px]">
+              <thead className="bg-slate-50 text-slate-600 font-semibold uppercase text-[10px] border-b border-slate-200">
                 <tr>
-                  <th className="py-3 px-4">#</th>
-                  <th className="py-3 px-4">Product / Item</th>
-                  <th className="py-3 px-4">SKU</th>
-                  <th className="py-3 px-4">Target Storage Location</th>
-                  <th className="py-3 px-4 text-right">Quantity</th>
-                  <th className="py-3 px-4 text-right">Unit Cost</th>
-                  <th className="py-3 px-4 text-right">Subtotal</th>
+                  <th className="py-2.5 px-4">#</th>
+                  <th className="py-2.5 px-4">Product / Item</th>
+                  <th className="py-2.5 px-4">SKU</th>
+                  <th className="py-2.5 px-4">Target Storage Location</th>
+                  <th className="py-2.5 px-4 text-right">Quantity</th>
+                  <th className="py-2.5 px-4 text-right">Unit Cost</th>
+                  <th className="py-2.5 px-4 text-right">Subtotal</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-slate-700">
@@ -390,23 +391,23 @@ export const Receipts: React.FC<ReceiptsProps> = ({ initialProductToReceive }) =
                   const subtotal = item.quantity * Number(item.unit_cost || 0);
                   return (
                     <tr key={idx} className="hover:bg-slate-50/50">
-                      <td className="py-3 px-4 text-slate-400 font-mono">{idx + 1}</td>
-                      <td className="py-3 px-4 font-semibold text-slate-900">{item.product_name}</td>
-                      <td className="py-3 px-4 font-mono text-slate-500 text-[11px]">{item.product_sku}</td>
-                      <td className="py-3 px-4 text-slate-600">{item.location_name || 'Designated Warehouse Location'}</td>
-                      <td className="py-3 px-4 text-right font-bold text-slate-900">+{item.quantity}</td>
-                      <td className="py-3 px-4 text-right text-slate-600">₹{Number(item.unit_cost || 0).toFixed(2)}</td>
-                      <td className="py-3 px-4 text-right font-semibold text-slate-900">₹{subtotal.toFixed(2)}</td>
+                      <td className="py-2.5 px-4 text-slate-400 font-mono">{idx + 1}</td>
+                      <td className="py-2.5 px-4 font-semibold text-slate-900">{item.product_name}</td>
+                      <td className="py-2.5 px-4 font-mono text-slate-500 text-[11px]">{item.product_sku}</td>
+                      <td className="py-2.5 px-4 text-slate-600">{item.location_name || 'Designated Warehouse Location'}</td>
+                      <td className="py-2.5 px-4 text-right font-bold text-slate-900">+{item.quantity}</td>
+                      <td className="py-2.5 px-4 text-right text-slate-600">₹{Number(item.unit_cost || 0).toFixed(2)}</td>
+                      <td className="py-2.5 px-4 text-right font-semibold text-slate-900">₹{subtotal.toFixed(2)}</td>
                     </tr>
                   );
                 })}
               </tbody>
-              <tfoot className="bg-slate-50/80 font-bold border-t border-slate-200">
+              <tfoot className="bg-slate-50/80 font-semibold border-t border-slate-200">
                 <tr>
-                  <td colSpan={4} className="py-3 px-4 text-right uppercase text-[10px] text-slate-500">Totals:</td>
-                  <td className="py-3 px-4 text-right text-slate-900 font-black">{totalQty} units</td>
-                  <td className="py-3 px-4"></td>
-                  <td className="py-3 px-4 text-right text-brand-700 text-sm font-black">₹{totalCost.toFixed(2)}</td>
+                  <td colSpan={4} className="py-2.5 px-4 text-right uppercase text-[10px] text-slate-500 font-medium">Totals:</td>
+                  <td className="py-2.5 px-4 text-right text-slate-900 font-bold">{totalQty} units</td>
+                  <td className="py-2.5 px-4"></td>
+                  <td className="py-2.5 px-4 text-right text-brand-700 text-xs font-bold">₹{totalCost.toFixed(2)}</td>
                 </tr>
               </tfoot>
             </table>
@@ -430,25 +431,25 @@ export const Receipts: React.FC<ReceiptsProps> = ({ initialProductToReceive }) =
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-white p-5 rounded-xl border border-slate-200/80 shadow-sm">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-1">
         <div>
-          <h2 className="text-xl font-bold text-slate-900 tracking-tight">Inbound Receipts (Procurement)</h2>
+          <h1 className="text-xl font-semibold text-slate-900 tracking-tight">Inbound Receipts (Procurement)</h1>
           <p className="text-xs text-slate-500 mt-0.5">
-            Log shipments from suppliers. Workflow: <span className="font-semibold text-slate-700">Draft → Ready → Done</span>.
+            Log shipments from suppliers. Workflow: <span className="font-medium text-slate-700">Draft → Ready → Done</span>.
           </p>
         </div>
         <button
           onClick={() => setIsModalOpen(true)}
-          className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold rounded-lg shadow-sm transition-all"
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-brand-600 hover:bg-brand-700 text-white text-xs font-medium rounded-md shadow-xs transition-colors"
         >
-          <Plus className="w-4 h-4" />
+          <Plus className="w-3.5 h-3.5" />
           <span>New Inbound Receipt</span>
         </button>
       </div>
 
       {/* Error banner */}
       {errorMsg && (
-        <div className="flex items-center gap-2 p-3 bg-rose-50 border border-rose-200 rounded-lg text-xs text-rose-700">
+        <div className="flex items-center gap-2 p-3 bg-rose-50 border border-rose-200 rounded-md text-xs text-rose-700">
           <XCircle className="w-4 h-4 flex-shrink-0" />
           <span>{errorMsg}</span>
           <button onClick={() => setErrorMsg(null)} className="ml-auto text-rose-400 hover:text-rose-600">✕</button>
@@ -456,15 +457,15 @@ export const Receipts: React.FC<ReceiptsProps> = ({ initialProductToReceive }) =
       )}
 
       {/* Search Bar & View Mode Switcher */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-white p-3.5 rounded-xl border border-slate-200/80 shadow-sm">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-white p-3 rounded-lg border border-slate-200 shadow-[0_1px_2px_0_rgba(0,0,0,0.02)]">
         <div className="relative flex-1 max-w-md">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+          <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search receipts by reference, supplier, contact, item..."
-            className="w-full pl-9 pr-8 py-2 text-xs border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-brand-500"
+            className="w-full pl-8 pr-8 py-1.5 text-xs bg-slate-50 hover:bg-slate-100/60 focus:bg-white border border-slate-200 rounded-md focus:outline-none focus:border-brand-600 focus:ring-1 focus:ring-brand-600 text-slate-800 transition-colors"
           />
           {searchQuery && (
             <button
@@ -477,14 +478,14 @@ export const Receipts: React.FC<ReceiptsProps> = ({ initialProductToReceive }) =
         </div>
 
         <div className="flex items-center gap-2">
-          <span className="text-xs text-slate-400 font-medium">View:</span>
-          <div className="inline-flex rounded-lg border border-slate-200 p-0.5 bg-slate-50">
+          <span className="text-xs text-slate-500 font-medium">View:</span>
+          <div className="inline-flex rounded-md border border-slate-200 p-0.5 bg-slate-50">
             <button
               onClick={() => setViewMode('list')}
-              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
+              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-medium transition-colors ${
                 viewMode === 'list'
-                  ? 'bg-white text-slate-900 shadow-sm border border-slate-200/60'
-                  : 'text-slate-500 hover:text-slate-900'
+                  ? 'bg-white text-slate-900 shadow-xs border border-slate-200/60'
+                  : 'text-slate-600 hover:text-slate-900'
               }`}
             >
               <LayoutList className="w-3.5 h-3.5" />
@@ -492,10 +493,10 @@ export const Receipts: React.FC<ReceiptsProps> = ({ initialProductToReceive }) =
             </button>
             <button
               onClick={() => setViewMode('kanban')}
-              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
+              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-medium transition-colors ${
                 viewMode === 'kanban'
-                  ? 'bg-white text-slate-900 shadow-sm border border-slate-200/60'
-                  : 'text-slate-500 hover:text-slate-900'
+                  ? 'bg-white text-slate-900 shadow-xs border border-slate-200/60'
+                  : 'text-slate-600 hover:text-slate-900'
               }`}
             >
               <Kanban className="w-3.5 h-3.5" />
@@ -507,27 +508,27 @@ export const Receipts: React.FC<ReceiptsProps> = ({ initialProductToReceive }) =
 
       {/* Main Content Area: List vs Kanban */}
       {loading ? (
-        <div className="p-8 text-center text-xs text-slate-400 bg-white rounded-xl border border-slate-200">
+        <div className="p-8 text-center text-xs text-slate-400 bg-white rounded-lg border border-slate-200">
           Loading receipts...
         </div>
       ) : filteredReceipts.length === 0 ? (
-        <div className="p-8 text-center text-xs text-slate-400 bg-white rounded-xl border border-slate-200">
+        <div className="p-8 text-center text-xs text-slate-400 bg-white rounded-lg border border-slate-200">
           {searchQuery ? 'No receipts match your search query.' : 'No receipts recorded yet. Click "New Inbound Receipt" to create one.'}
         </div>
       ) : viewMode === 'list' ? (
         /* LIST VIEW */
-        <div className="bg-white rounded-xl border border-slate-200/80 shadow-sm overflow-hidden">
+        <div className="bg-white rounded-lg border border-slate-200 shadow-[0_1px_2px_0_rgba(0,0,0,0.02)] overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs border-collapse">
-              <thead className="bg-slate-50/80 text-slate-500 font-semibold uppercase text-[10px] border-b border-slate-200/60">
+              <thead className="bg-slate-50 text-slate-600 font-semibold uppercase text-[10px] border-b border-slate-200">
                 <tr>
-                  <th className="py-3.5 px-4">Receipt Ref</th>
-                  <th className="py-3.5 px-3">Receive From (Supplier)</th>
-                  <th className="py-3.5 px-3">Scheduled Date</th>
-                  <th className="py-3.5 px-3">Responsible</th>
-                  <th className="py-3.5 px-3">Status</th>
-                  <th className="py-3.5 px-3 text-right">Items / Qty</th>
-                  <th className="py-3.5 px-4 text-center">Actions</th>
+                  <th className="py-2.5 px-4">Receipt Ref</th>
+                  <th className="py-2.5 px-3">Receive From (Supplier)</th>
+                  <th className="py-2.5 px-3">Scheduled Date</th>
+                  <th className="py-2.5 px-3">Responsible</th>
+                  <th className="py-2.5 px-3">Status</th>
+                  <th className="py-2.5 px-3 text-right">Items / Qty</th>
+                  <th className="py-2.5 px-4 text-center">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-slate-700">
@@ -616,18 +617,19 @@ export const Receipts: React.FC<ReceiptsProps> = ({ initialProductToReceive }) =
         </div>
       ) : (
         /* KANBAN VIEW */
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          {(['DRAFT', 'READY', 'DONE', 'CANCELLED'] as const).map((colStatus) => {
-            const colReceipts = filteredReceipts.filter(r => r.status === colStatus);
-            const colLabels = {
-              DRAFT: 'Draft',
-              READY: 'Ready to Receive',
-              DONE: 'Received (Done)',
-              CANCELLED: 'Canceled'
-            };
+        <KanbanBoardContainer>
+          <div className="flex gap-4 items-start min-w-max px-2 sm:px-4">
+            {(['DRAFT', 'READY', 'DONE', 'CANCELLED'] as const).map((colStatus) => {
+              const colReceipts = filteredReceipts.filter(r => r.status === colStatus);
+              const colLabels = {
+                DRAFT: 'Draft',
+                READY: 'Ready to Receive',
+                DONE: 'Received (Done)',
+                CANCELLED: 'Canceled'
+              };
 
-            return (
-              <div key={colStatus} className="bg-slate-50/80 rounded-xl border border-slate-200 p-3.5 flex flex-col space-y-3">
+              return (
+                <div key={colStatus} className="w-[280px] min-w-[280px] shrink-0 bg-slate-50/80 rounded-xl border border-slate-200 p-3.5 flex flex-col space-y-3">
                 <div className="flex items-center justify-between border-b border-slate-200/80 pb-2.5">
                   <div className="flex items-center gap-2">
                     <span className="text-xs font-bold text-slate-800 uppercase tracking-wide">
@@ -735,7 +737,8 @@ export const Receipts: React.FC<ReceiptsProps> = ({ initialProductToReceive }) =
               </div>
             );
           })}
-        </div>
+          </div>
+        </KanbanBoardContainer>
       )}
 
       {/* New Receipt Modal */}

@@ -44,19 +44,20 @@ export const Modal: React.FC<ModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
-      <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm transition-opacity" onClick={onClose} />
+      <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-[2px] transition-opacity" onClick={onClose} />
       <div className="flex min-h-full items-center justify-center p-4">
-        <div className={`relative w-full ${maxWidthClass} rounded-2xl bg-white p-6 shadow-2xl transition-all border border-slate-200`}>
-          <div className="flex items-start justify-between pb-4 border-b border-slate-100">
+        <div className={`relative w-full ${maxWidthClass} rounded-lg bg-white p-6 shadow-xl transition-all border border-slate-200`}>
+          <div className="flex items-start justify-between pb-3.5 border-b border-slate-100">
             <div>
-              <h3 className="text-lg font-semibold text-slate-900">{title}</h3>
+              <h3 className="text-base font-semibold text-slate-900">{title}</h3>
               {subtitle && <p className="text-xs text-slate-500 mt-0.5">{subtitle}</p>}
             </div>
             <button
               onClick={onClose}
-              className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors"
+              className="rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors"
+              aria-label="Close modal"
             >
-              <X className="w-5 h-5" />
+              <X className="w-4 h-4" />
             </button>
           </div>
           <div className="mt-4">{children}</div>

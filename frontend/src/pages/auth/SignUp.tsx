@@ -28,23 +28,23 @@ export const SignUp: React.FC<SignUpProps> = ({ onNavigateLogin }) => {
 
   return (
     <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
-      <div className="w-full max-w-md bg-white rounded-2xl p-8 shadow-2xl border border-slate-100">
+      <div className="w-full max-w-sm bg-white rounded-lg p-7 border border-slate-200 shadow-sm">
         <div className="text-center mb-6">
-          <div className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-brand-600 text-white shadow-lg shadow-brand-500/30 mb-3">
-            <Boxes className="h-7 w-7" />
+          <div className="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-brand-600 text-white mb-2.5 shadow-xs">
+            <Boxes className="h-5 w-5" />
           </div>
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Create StockSense Account</h1>
-          <p className="text-xs text-slate-500 mt-1">Join your organization's inventory management portal</p>
+          <h1 className="text-xl font-bold text-slate-900 tracking-tight">Create StockSense Account</h1>
+          <p className="text-xs text-slate-500 mt-0.5">Join your organization's inventory portal</p>
         </div>
 
         {error && (
-          <div className="mb-4 p-3 bg-rose-50 border border-rose-200 text-rose-700 rounded-lg text-xs flex items-center gap-2">
+          <div className="mb-4 p-2.5 bg-rose-50 border border-rose-200 text-rose-700 rounded text-xs flex items-center gap-2">
             <AlertCircle className="w-4 h-4 shrink-0 text-rose-500" />
             <span>{error}</span>
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-3.5">
           <div>
             <label className="block text-xs font-semibold text-slate-700 mb-1">Full Name</label>
             <input
@@ -52,7 +52,7 @@ export const SignUp: React.FC<SignUpProps> = ({ onNavigateLogin }) => {
               value={name}
               onChange={(e) => setName(e.target.value)}
               required
-              className="w-full px-3.5 py-2 text-xs border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500"
+              className="w-full px-3 py-2 text-xs border border-slate-200 rounded-md focus:outline-none focus:ring-1 focus:ring-brand-500 focus:border-brand-500"
               placeholder="e.g. Jordan Lee"
             />
           </div>
@@ -64,7 +64,7 @@ export const SignUp: React.FC<SignUpProps> = ({ onNavigateLogin }) => {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              className="w-full px-3.5 py-2 text-xs border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500"
+              className="w-full px-3 py-2 text-xs border border-slate-200 rounded-md focus:outline-none focus:ring-1 focus:ring-brand-500 focus:border-brand-500"
               placeholder="jordan@company.com"
             />
           </div>
@@ -77,7 +77,7 @@ export const SignUp: React.FC<SignUpProps> = ({ onNavigateLogin }) => {
               onChange={(e) => setPassword(e.target.value)}
               required
               minLength={6}
-              className="w-full px-3.5 py-2 text-xs border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500"
+              className="w-full px-3 py-2 text-xs border border-slate-200 rounded-md focus:outline-none focus:ring-1 focus:ring-brand-500 focus:border-brand-500"
               placeholder="••••••••"
             />
           </div>
@@ -87,7 +87,7 @@ export const SignUp: React.FC<SignUpProps> = ({ onNavigateLogin }) => {
             <select
               value={role}
               onChange={(e) => setRole(e.target.value)}
-              className="w-full px-3.5 py-2 text-xs border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 bg-white"
+              className="w-full px-3 py-2 text-xs border border-slate-200 rounded-md focus:outline-none focus:ring-1 focus:ring-brand-500 focus:border-brand-500 bg-white text-slate-800"
             >
               <option value="inventory_manager">Inventory Manager (Full Access)</option>
               <option value="warehouse_staff">Warehouse Staff (Operational Access)</option>
@@ -97,14 +97,14 @@ export const SignUp: React.FC<SignUpProps> = ({ onNavigateLogin }) => {
           <button
             type="submit"
             disabled={loading}
-            className="w-full flex items-center justify-center gap-2 py-2.5 px-4 bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold rounded-lg shadow-sm transition-all hover:shadow"
+            className="w-full flex items-center justify-center gap-2 py-2 px-4 bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold rounded-md shadow-xs transition-colors"
           >
             <span>{loading ? 'Creating Account...' : 'Register & Enter Dashboard'}</span>
             <ArrowRight className="w-4 h-4" />
           </button>
         </form>
 
-        <div className="mt-6 text-center text-xs text-slate-500">
+        <div className="mt-5 text-center text-xs text-slate-500">
           Already have an account?{' '}
           <button onClick={onNavigateLogin} className="font-semibold text-brand-600 hover:underline">
             Sign In

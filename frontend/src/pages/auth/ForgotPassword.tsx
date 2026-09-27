@@ -148,35 +148,35 @@ export const ForgotPassword: React.FC<ForgotPasswordProps> = ({ onNavigateLogin 
 
   return (
     <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
-      <div className="w-full max-w-md bg-white rounded-2xl p-8 shadow-2xl border border-slate-100">
+      <div className="w-full max-w-sm bg-white rounded-lg p-7 border border-slate-200 shadow-sm">
         <div className="text-center mb-6">
-          <div className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-500 text-white shadow-lg shadow-amber-500/30 mb-3">
-            <KeyRound className="h-6 w-6" />
+          <div className="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-amber-600 text-white mb-2.5 shadow-xs">
+            <KeyRound className="h-5 w-5" />
           </div>
-          <h1 className="text-xl font-bold text-slate-900">OTP Password Reset</h1>
-          <p className="text-xs text-slate-500 mt-1">
-            {step === 'REQUEST' && 'Enter your verified account email to receive a 6-digit reset code.'}
+          <h1 className="text-xl font-bold text-slate-900 tracking-tight">OTP Password Reset</h1>
+          <p className="text-xs text-slate-500 mt-0.5">
+            {step === 'REQUEST' && 'Enter your account email to receive a 6-digit reset code.'}
             {step === 'VERIFY' && 'Enter the 6-digit code received via email and your new password.'}
             {step === 'SUCCESS' && 'Your credentials have been securely updated.'}
           </p>
         </div>
 
         {error && (
-          <div className="mb-4 p-3 bg-rose-50 border border-rose-200 text-rose-700 rounded-lg text-xs flex items-center gap-2">
+          <div className="mb-4 p-2.5 bg-rose-50 border border-rose-200 text-rose-700 rounded text-xs flex items-center gap-2">
             <AlertCircle className="w-4 h-4 shrink-0 text-rose-500" />
             <span>{error}</span>
           </div>
         )}
 
         {infoMessage && step === 'VERIFY' && !error && (
-          <div className="mb-4 p-3 bg-amber-50/80 border border-amber-200 text-amber-800 rounded-lg text-xs flex items-center gap-2">
-            <Mail className="w-4 h-4 shrink-0 text-amber-600" />
+          <div className="mb-4 p-2.5 bg-slate-50 border border-slate-200 text-slate-700 rounded-lg text-xs flex items-center gap-2">
+            <Mail className="w-4 h-4 shrink-0 text-brand-600" />
             <span>{infoMessage}</span>
           </div>
         )}
 
         {step === 'REQUEST' && (
-          <form onSubmit={handleRequestOtp} className="space-y-4">
+          <form onSubmit={handleRequestOtp} className="space-y-3.5">
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">Registered Email</label>
               <input
@@ -185,14 +185,14 @@ export const ForgotPassword: React.FC<ForgotPasswordProps> = ({ onNavigateLogin 
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 placeholder="name@company.com"
-                className="w-full px-3.5 py-2 text-xs border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500"
+                className="w-full px-3 py-2 text-xs border border-slate-200 rounded-md focus:outline-none focus:ring-1 focus:ring-brand-500 focus:border-brand-500"
               />
             </div>
 
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-2.5 px-4 bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold rounded-lg shadow-sm transition-all disabled:opacity-60"
+              className="w-full py-2 px-4 bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold rounded-md shadow-xs transition-colors disabled:opacity-60"
             >
               {loading ? 'Sending Code...' : 'Send Reset OTP Code'}
             </button>
@@ -200,15 +200,15 @@ export const ForgotPassword: React.FC<ForgotPasswordProps> = ({ onNavigateLogin 
         )}
 
         {step === 'VERIFY' && (
-          <form onSubmit={handleResetPassword} className="space-y-4">
-            <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-700 flex items-center justify-between">
+          <form onSubmit={handleResetPassword} className="space-y-3.5">
+            <div className="p-2.5 bg-slate-50 border border-slate-200 rounded-md text-xs text-slate-700 flex items-center justify-between">
               <span className="truncate">
                 Sent to: <strong className="font-semibold text-slate-900">{email}</strong>
               </span>
               <button
                 type="button"
                 onClick={() => { setStep('REQUEST'); setError(null); setInfoMessage(null); }}
-                className="text-amber-600 hover:text-amber-800 underline text-[11px] shrink-0 ml-2"
+                className="text-brand-600 hover:text-brand-800 underline text-[11px] shrink-0 ml-2"
               >
                 Change
               </button>
@@ -226,7 +226,7 @@ export const ForgotPassword: React.FC<ForgotPasswordProps> = ({ onNavigateLogin 
                 placeholder="••••••"
                 required
                 autoFocus
-                className="w-full text-center font-mono tracking-widest text-xl py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500"
+                className="w-full text-center font-mono tracking-widest text-lg py-2 border border-slate-200 rounded-md focus:outline-none focus:ring-1 focus:ring-brand-500 focus:border-brand-500"
               />
             </div>
 
@@ -239,11 +239,11 @@ export const ForgotPassword: React.FC<ForgotPasswordProps> = ({ onNavigateLogin 
                 required
                 minLength={6}
                 placeholder="Enter at least 6 characters"
-                className="w-full px-3.5 py-2 text-xs border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500"
+                className="w-full px-3 py-2 text-xs border border-slate-200 rounded-md focus:outline-none focus:ring-1 focus:ring-brand-500 focus:border-brand-500"
               />
             </div>
 
-            <div className="flex items-center justify-between text-xs text-slate-500 pt-1">
+            <div className="flex items-center justify-between text-xs text-slate-500 pt-0.5">
               <span>Didn't receive code?</span>
               <button
                 type="button"
@@ -252,7 +252,7 @@ export const ForgotPassword: React.FC<ForgotPasswordProps> = ({ onNavigateLogin 
                 className={`inline-flex items-center gap-1 font-semibold transition-colors ${
                   cooldown > 0 || resending
                     ? 'text-slate-400 cursor-not-allowed'
-                    : 'text-amber-600 hover:text-amber-700 underline'
+                    : 'text-brand-600 hover:text-brand-700 underline'
                 }`}
               >
                 {resending && <RefreshCw className="w-3 h-3 animate-spin" />}
@@ -269,7 +269,7 @@ export const ForgotPassword: React.FC<ForgotPasswordProps> = ({ onNavigateLogin 
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-2.5 px-4 bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold rounded-lg shadow-sm transition-all disabled:opacity-60"
+              className="w-full py-2 px-4 bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold rounded-md shadow-xs transition-colors disabled:opacity-60"
             >
               {loading ? 'Verifying & Updating...' : 'Verify OTP & Reset Password'}
             </button>
@@ -277,12 +277,12 @@ export const ForgotPassword: React.FC<ForgotPasswordProps> = ({ onNavigateLogin 
         )}
 
         {step === 'SUCCESS' && (
-          <div className="text-center py-4 space-y-4">
-            <CheckCircle className="w-12 h-12 text-emerald-500 mx-auto" />
+          <div className="text-center py-4 space-y-3">
+            <CheckCircle className="w-10 h-10 text-emerald-500 mx-auto" />
             <p className="text-xs text-slate-600">Password has been updated. You can now log into your account.</p>
             <button
               onClick={onNavigateLogin}
-              className="w-full py-2.5 px-4 bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold rounded-lg shadow-sm transition-all"
+              className="w-full py-2 px-4 bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold rounded-md shadow-xs transition-colors"
             >
               Back to Login
             </button>
@@ -290,7 +290,7 @@ export const ForgotPassword: React.FC<ForgotPasswordProps> = ({ onNavigateLogin 
         )}
 
         {step !== 'SUCCESS' && (
-          <div className="mt-6 text-center">
+          <div className="mt-5 text-center">
             <button
               onClick={onNavigateLogin}
               className="inline-flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-800 font-medium"

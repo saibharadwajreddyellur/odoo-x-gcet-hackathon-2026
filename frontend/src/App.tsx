@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { StockAlertProvider, useStockAlerts } from './context/StockAlertContext';
 import { Navbar } from './components/common/Navbar';
 import { Sidebar, NavTab } from './components/common/Sidebar';
 import { Login } from './pages/auth/Login';
@@ -19,10 +20,19 @@ import { Product } from './types';
 
 const MainApp: React.FC = () => {
   const { isAuthenticated, isManager } = useAuth();
+  const { lowStockCount, outOfStockCount, totalAttentionCount } = useStockAlerts();
   const [authView, setAuthView] = useState<'LOGIN' | 'SIGNUP' | 'FORGOT'>('LOGIN');
   const [currentTab, setCurrentTab] = useState<NavTab>('dashboard');
   const [quickReceiptProduct, setQuickReceiptProduct] = useState<Product | null>(null);
   const [globalSearch, setGlobalSearch] = useState('');
+  const [stockStatusFilter, setStockStatusFilter] = useState<
+    'ALL' | 'ATTENTION' | 'LOW_STOCK' | 'OUT_OF_STOCK' | 'IN_STOCK' | 'RESERVED'
+  >('ALL');
+
+  const handleOpenStockAlerts = () => {
+    setStockStatusFilter('ATTENTION');
+    setCurrentTab('stock');
+  };
 
   // If not logged in, show auth screens
   if (!isAuthenticated) {
@@ -41,7 +51,7 @@ const MainApp: React.FC = () => {
   }
 
   return (
-    <div className="h-screen bg-slate-50 flex flex-col font-sans text-slate-900 antialiased overflow-hidden">
+    <div className="h-screen bg-[#f8f9fa] flex flex-col font-sans text-slate-800 antialiased overflow-hidden">
       <Navbar
         searchTerm={globalSearch}
         onSearchChange={(val) => {
@@ -56,12 +66,21 @@ const MainApp: React.FC = () => {
       <div className="flex flex-1 overflow-hidden">
         <Sidebar
           currentTab={currentTab}
-          onTabChange={setCurrentTab}
-          lowStockCount={2}
+          onTabChange={(tab) => {
+            if (tab === 'stock') {
+              // Default to ALL when directly clicking stock nav tab unless already filtered
+              setStockStatusFilter('ALL');
+            }
+            setCurrentTab(tab);
+          }}
+          lowStockCount={lowStockCount}
+          outOfStockCount={outOfStockCount}
+          totalAlertCount={totalAttentionCount}
+          onOpenStockAlerts={handleOpenStockAlerts}
         />
 
-        <main className="flex-1 overflow-y-auto">
-          <div className="p-6 lg:p-8 max-w-7xl mx-auto w-full">
+        <main className="flex-1 overflow-y-auto bg-[#f8f9fa]">
+          <div className="p-5 lg:p-6 max-w-7xl mx-auto w-full">
             {currentTab === 'dashboard' && (
               <Dashboard
                 onNavigateTab={setCurrentTab}
@@ -77,6 +96,8 @@ const MainApp: React.FC = () => {
                 onNavigateTab={setCurrentTab}
                 externalSearchTerm={globalSearch}
                 onSearchChange={setGlobalSearch}
+                initialStatusFilter={stockStatusFilter}
+                onStatusFilterChange={setStockStatusFilter}
               />
             )}
 
@@ -112,7 +133,9 @@ const MainApp: React.FC = () => {
 export function App() {
   return (
     <AuthProvider>
-      <MainApp />
+      <StockAlertProvider>
+        <MainApp />
+      </StockAlertProvider>
     </AuthProvider>
   );
 }
