@@ -131,7 +131,7 @@ The StockSense Team
             <tr>
                 <td style="vertical-align: middle; padding-right: 12px;">
     <img
-        src="https://YOUR-VERCEL-DOMAIN/stocksense_logo.png"
+        src="https://stocksense-web-app.vercel.app/stocksense_logo.png"
         width="44"
         height="44"
         alt="StockSense"
