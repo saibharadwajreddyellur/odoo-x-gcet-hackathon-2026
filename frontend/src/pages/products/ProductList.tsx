@@ -428,14 +428,14 @@ export const ProductList: React.FC<ProductListProps> = ({ onNavigateTab, externa
             <button
               type="button"
               onClick={() => setIsModalOpen(false)}
-              className="px-3.5 py-1.5 border border-slate-200 text-slate-700 rounded-md hover:bg-slate-50 font-medium transition-colors"
+              className="px-3.5 py-1.5 border border-slate-200 text-slate-700 rounded-md hover:bg-slate-50 font-medium text-xs transition-colors cursor-pointer"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={submitting}
-              className="px-3.5 py-1.5 bg-brand-600 hover:bg-brand-700 text-white rounded-md font-medium shadow-xs transition-colors"
+              className="px-3.5 py-1.5 bg-brand-600 hover:bg-brand-700 text-white rounded-md font-medium text-xs shadow-xs transition-colors cursor-pointer disabled:opacity-50"
             >
               {submitting ? 'Registering...' : 'Save Product & Allocate'}
             </button>

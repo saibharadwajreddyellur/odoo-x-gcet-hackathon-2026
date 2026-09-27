@@ -295,9 +295,9 @@ export const Deliveries: React.FC = () => {
                 <button
                   onClick={() => handleCheckAvailability(selectedDelivery.id)}
                   disabled={processingId === selectedDelivery.id}
-                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg text-xs shadow-xs transition-all disabled:opacity-60"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-md text-xs shadow-xs transition-colors cursor-pointer disabled:opacity-50"
                 >
-                  <PackageCheck className="w-4 h-4" />
+                  <PackageCheck className="w-3.5 h-3.5" />
                   <span>{processingId === selectedDelivery.id ? 'Checking...' : 'Check Availability'}</span>
                 </button>
               </>
@@ -308,17 +308,17 @@ export const Deliveries: React.FC = () => {
                 <button
                   onClick={() => handleCancelDelivery(selectedDelivery.id)}
                   disabled={processingId === selectedDelivery.id}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-lg text-xs font-semibold transition-all disabled:opacity-60 shadow-xs"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-md text-xs font-medium transition-colors cursor-pointer disabled:opacity-50"
                 >
-                  <XCircle className="w-4 h-4 text-rose-600" />
+                  <XCircle className="w-3.5 h-3.5 text-rose-600" />
                   <span>Cancel Delivery</span>
                 </button>
                 <button
                   onClick={() => handleMarkReady(selectedDelivery.id)}
                   disabled={processingId === selectedDelivery.id}
-                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-amber-600 hover:bg-amber-700 text-white font-semibold rounded-lg text-xs shadow-xs transition-all disabled:opacity-60"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white font-medium rounded-md text-xs shadow-xs transition-colors cursor-pointer disabled:opacity-50"
                 >
-                  <PackageCheck className="w-4 h-4" />
+                  <PackageCheck className="w-3.5 h-3.5" />
                   <span>{processingId === selectedDelivery.id ? 'Rechecking...' : 'Recheck Stock & Mark Ready'}</span>
                 </button>
               </>
@@ -329,17 +329,17 @@ export const Deliveries: React.FC = () => {
                 <button
                   onClick={() => handleCancelDelivery(selectedDelivery.id)}
                   disabled={processingId === selectedDelivery.id}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-lg text-xs font-semibold transition-all disabled:opacity-60 shadow-xs"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-md text-xs font-medium transition-colors cursor-pointer disabled:opacity-50"
                 >
-                  <XCircle className="w-4 h-4 text-rose-600" />
+                  <XCircle className="w-3.5 h-3.5 text-rose-600" />
                   <span>Cancel Delivery</span>
                 </button>
                 <button
                   onClick={() => handleValidateDelivery(selectedDelivery.id)}
                   disabled={processingId === selectedDelivery.id}
-                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-brand-600 hover:bg-brand-700 text-white font-semibold rounded-lg text-xs shadow-xs transition-all disabled:opacity-60"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-brand-600 hover:bg-brand-700 text-white font-medium rounded-md text-xs shadow-xs transition-colors cursor-pointer disabled:opacity-50"
                 >
-                  <CheckCircle className="w-4 h-4" />
+                  <CheckCircle className="w-3.5 h-3.5" />
                   <span>{processingId === selectedDelivery.id ? 'Validating...' : 'Validate & Dispatch'}</span>
                 </button>
               </>
@@ -348,15 +348,15 @@ export const Deliveries: React.FC = () => {
             {selectedDelivery.status === 'DONE' && (
               <button
                 onClick={() => setPrintDelivery(selectedDelivery)}
-                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-slate-850 hover:bg-slate-900 text-white font-semibold rounded-lg text-xs shadow-xs transition-all"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white font-medium rounded-md text-xs shadow-xs transition-colors cursor-pointer"
               >
-                <Printer className="w-4 h-4" />
+                <Printer className="w-3.5 h-3.5" />
                 <span>Print Delivery Slip</span>
               </button>
             )}
 
             {selectedDelivery.status === 'CANCELLED' && (
-              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-rose-50 text-rose-700 rounded-lg text-xs font-semibold border border-rose-200">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-rose-50 text-rose-700 rounded-md text-xs font-medium border border-rose-200">
                 <XCircle className="w-3.5 h-3.5" />
                 <span>Delivery Order Cancelled</span>
               </span>

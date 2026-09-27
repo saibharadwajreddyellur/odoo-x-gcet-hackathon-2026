@@ -111,3 +111,6 @@ coverage/
 *.generated.*
 generated/
 uploads/
+
+# AI agent skills
+.agents/

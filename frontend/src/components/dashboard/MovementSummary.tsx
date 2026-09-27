@@ -56,8 +56,8 @@ export const MovementSummary: React.FC<MovementSummaryProps> = ({ trends }) => {
               type="monotone"
               dataKey="receipts"
               name="Receipts (Inbound)"
-              stroke="#16a34a"
-              fill="#16a34a"
+              stroke="#059669"
+              fill="#059669"
               fillOpacity={0.08}
               strokeWidth={1.5}
             />

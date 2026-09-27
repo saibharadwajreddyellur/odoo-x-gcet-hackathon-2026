@@ -220,14 +220,14 @@ export const Transfers: React.FC = () => {
         <div className="flex items-center gap-2">
           <button
             onClick={() => loadData()}
-            className="p-2 border border-slate-200 hover:bg-slate-50 text-slate-600 rounded-lg text-xs font-semibold transition-colors"
+            className="p-2 border border-slate-200 hover:bg-slate-50 text-slate-600 rounded-md text-xs font-medium transition-colors cursor-pointer"
             title="Refresh Transfers"
           >
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
           </button>
           <button
             onClick={() => setIsModalOpen(true)}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold rounded-lg shadow-[0_1px_2px_0_rgba(0,0,0,0.05)] transition-all"
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-brand-600 hover:bg-brand-700 text-white text-xs font-medium rounded-md shadow-xs transition-colors cursor-pointer"
           >
             <Plus className="w-4 h-4" />
             <span>New Internal Transfer</span>
@@ -345,7 +345,7 @@ export const Transfers: React.FC = () => {
                       <button
                         onClick={() => handleCancelTransfer(trf.id)}
                         disabled={processingId === trf.id}
-                        className="inline-flex items-center gap-1 px-2.5 py-1.5 text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-lg text-xs font-semibold transition-all disabled:opacity-60"
+                        className="inline-flex items-center gap-1 px-2.5 py-1.5 text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-md text-xs font-medium transition-colors cursor-pointer disabled:opacity-60"
                         title="Cancel Transfer"
                       >
                         <XCircle className="w-3.5 h-3.5 text-rose-600" />
@@ -354,7 +354,7 @@ export const Transfers: React.FC = () => {
                       <button
                         onClick={() => handleScheduleTransfer(trf.id)}
                         disabled={processingId === trf.id}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white font-semibold rounded-lg text-xs shadow-xs transition-all disabled:opacity-60"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white font-medium rounded-md text-xs shadow-xs transition-colors cursor-pointer disabled:opacity-60"
                       >
                         <Calendar className="w-3.5 h-3.5" />
                         <span>{processingId === trf.id ? 'Scheduling...' : 'Schedule / Confirm'}</span>
@@ -367,7 +367,7 @@ export const Transfers: React.FC = () => {
                       <button
                         onClick={() => handleCancelTransfer(trf.id)}
                         disabled={processingId === trf.id}
-                        className="inline-flex items-center gap-1 px-2.5 py-1.5 text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-lg text-xs font-semibold transition-all disabled:opacity-60"
+                        className="inline-flex items-center gap-1 px-2.5 py-1.5 text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-md text-xs font-medium transition-colors cursor-pointer disabled:opacity-60"
                         title="Cancel Transfer"
                       >
                         <XCircle className="w-3.5 h-3.5 text-rose-600" />
@@ -376,7 +376,7 @@ export const Transfers: React.FC = () => {
                       <button
                         onClick={() => handleCompleteTransfer(trf.id)}
                         disabled={processingId === trf.id}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-brand-600 hover:bg-brand-700 text-white font-semibold rounded-lg text-xs shadow-xs transition-all disabled:opacity-60"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-brand-600 hover:bg-brand-700 text-white font-medium rounded-md text-xs shadow-xs transition-colors cursor-pointer disabled:opacity-60"
                       >
                         <CheckCircle2 className="w-3.5 h-3.5" />
                         <span>{processingId === trf.id ? 'Transferring...' : 'Execute & Complete'}</span>
@@ -656,7 +656,7 @@ export const Transfers: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setSelectedTransferId(null)}
-                className="px-3.5 py-2 border border-slate-200 text-slate-700 rounded-lg hover:bg-slate-50 font-medium"
+                className="px-3.5 py-1.5 border border-slate-200 text-slate-700 rounded-md hover:bg-slate-50 text-xs font-medium cursor-pointer"
               >
                 Close
               </button>
@@ -670,7 +670,7 @@ export const Transfers: React.FC = () => {
                         setSelectedTransferId(null);
                       }}
                       disabled={processingId === selectedTransfer.id}
-                      className="px-3.5 py-2 text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-lg font-semibold transition-all disabled:opacity-60"
+                      className="px-3.5 py-1.5 text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-md text-xs font-medium transition-colors cursor-pointer disabled:opacity-60"
                     >
                       Cancel Transfer
                     </button>
@@ -680,7 +680,7 @@ export const Transfers: React.FC = () => {
                         setSelectedTransferId(null);
                       }}
                       disabled={processingId === selectedTransfer.id}
-                      className="inline-flex items-center gap-1.5 px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white font-semibold rounded-lg shadow-sm transition-all disabled:opacity-60"
+                      className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-amber-600 hover:bg-amber-700 text-white font-medium rounded-md text-xs shadow-xs transition-colors cursor-pointer disabled:opacity-60"
                     >
                       <Calendar className="w-3.5 h-3.5" />
                       <span>{processingId === selectedTransfer.id ? 'Scheduling...' : 'Schedule / Confirm'}</span>
@@ -696,7 +696,7 @@ export const Transfers: React.FC = () => {
                         setSelectedTransferId(null);
                       }}
                       disabled={processingId === selectedTransfer.id}
-                      className="px-3.5 py-2 text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-lg font-semibold transition-all disabled:opacity-60"
+                      className="px-3.5 py-1.5 text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-md text-xs font-medium transition-colors cursor-pointer disabled:opacity-60"
                     >
                       Cancel Transfer
                     </button>
@@ -706,7 +706,7 @@ export const Transfers: React.FC = () => {
                         setSelectedTransferId(null);
                       }}
                       disabled={processingId === selectedTransfer.id}
-                      className="inline-flex items-center gap-1.5 px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white font-semibold rounded-lg shadow-xs transition-all disabled:opacity-60"
+                      className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-brand-600 hover:bg-brand-700 text-white font-medium rounded-md text-xs shadow-xs transition-colors cursor-pointer disabled:opacity-60"
                     >
                       <CheckCircle2 className="w-3.5 h-3.5" />
                       <span>{processingId === selectedTransfer.id ? 'Executing...' : 'Execute & Complete'}</span>
@@ -715,13 +715,13 @@ export const Transfers: React.FC = () => {
                 )}
 
                 {selectedTransfer.status === 'COMPLETED' && (
-                  <span className="text-xs text-emerald-700 font-semibold bg-emerald-50 px-3 py-1.5 rounded-lg border border-emerald-200">
-                    Transfer is completed & immutable
+                  <span className="text-xs text-emerald-700 font-medium bg-emerald-50 px-2.5 py-1 rounded border border-emerald-200">
+                    Transfer is completed & audited
                   </span>
                 )}
 
                 {selectedTransfer.status === 'CANCELLED' && (
-                  <span className="text-xs text-rose-700 font-semibold bg-rose-50 px-3 py-1.5 rounded-lg border border-rose-200">
+                  <span className="text-xs text-rose-700 font-medium bg-rose-50 px-2.5 py-1 rounded border border-rose-200">
                     Transfer is cancelled
                   </span>
                 )}
@@ -876,14 +876,14 @@ export const Transfers: React.FC = () => {
             <button
               type="button"
               onClick={() => setIsModalOpen(false)}
-              className="px-3.5 py-1.5 border border-slate-200 text-slate-700 rounded-lg hover:bg-slate-50 font-medium"
+              className="px-3.5 py-1.5 border border-slate-200 text-slate-700 rounded-md hover:bg-slate-50 text-xs font-medium cursor-pointer"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={submitting}
-              className="px-3.5 py-1.5 bg-brand-600 hover:bg-brand-700 text-white rounded-lg font-semibold shadow-xs transition-all"
+              className="px-3.5 py-1.5 bg-brand-600 hover:bg-brand-700 text-white rounded-md text-xs font-medium shadow-xs transition-colors cursor-pointer disabled:opacity-50"
             >
               {submitting ? 'Creating...' : createStatus === 'DRAFT' ? 'Save as Draft' : 'Create & Schedule Transfer'}
             </button>

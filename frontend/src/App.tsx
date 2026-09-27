@@ -51,7 +51,7 @@ const MainApp: React.FC = () => {
   }
 
   return (
-    <div className="h-screen bg-[#f8f9fa] flex flex-col font-sans text-slate-800 antialiased overflow-hidden">
+    <div className="h-screen bg-slate-50 flex flex-col font-sans text-slate-800 antialiased overflow-hidden">
       <Navbar
         searchTerm={globalSearch}
         onSearchChange={(val) => {
@@ -79,7 +79,7 @@ const MainApp: React.FC = () => {
           onOpenStockAlerts={handleOpenStockAlerts}
         />
 
-        <main className="flex-1 overflow-y-auto bg-[#f8f9fa]">
+        <main className="flex-1 overflow-y-auto bg-slate-50">
           <div className="p-5 lg:p-6 max-w-7xl mx-auto w-full">
             {currentTab === 'dashboard' && (
               <Dashboard

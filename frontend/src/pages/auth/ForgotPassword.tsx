@@ -150,7 +150,7 @@ export const ForgotPassword: React.FC<ForgotPasswordProps> = ({ onNavigateLogin 
     <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
       <div className="w-full max-w-sm bg-white rounded-lg p-7 border border-slate-200 shadow-sm">
         <div className="text-center mb-6">
-          <div className="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-amber-600 text-white mb-2.5 shadow-xs">
+          <div className="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-brand-600 text-white mb-2.5 shadow-xs">
             <KeyRound className="h-5 w-5" />
           </div>
           <h1 className="text-xl font-bold text-slate-900 tracking-tight">OTP Password Reset</h1>

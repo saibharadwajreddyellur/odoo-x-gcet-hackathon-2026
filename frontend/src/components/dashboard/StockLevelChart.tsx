@@ -75,7 +75,7 @@ export const StockLevelChart: React.FC<StockLevelChartProps> = ({ data }) => {
               }}
               formatter={(val: any) => [`${val} Units`, 'Quantity']}
             />
-            <Bar dataKey="total_quantity" fill="#16a34a" radius={[2, 2, 0, 0]} barSize={32} />
+            <Bar dataKey="total_quantity" fill="#059669" radius={[3, 3, 0, 0]} barSize={32} />
           </BarChart>
         </ResponsiveContainer>
       </div>

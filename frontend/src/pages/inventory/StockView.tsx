@@ -396,7 +396,7 @@ export const StockView: React.FC<StockViewProps> = ({
       {/* Toast Alert Feedback */}
       {adjustmentFeedback && (
         <div
-          className={`flex items-start justify-between p-4 rounded-xl border shadow-sm transition-all ${
+          className={`flex items-start justify-between p-3.5 rounded-lg border shadow-xs transition-colors ${
             adjustmentFeedback.type === 'success'
               ? 'bg-emerald-50 border-emerald-200 text-emerald-900'
               : 'bg-rose-50 border-rose-200 text-rose-900'
@@ -999,14 +999,14 @@ export const StockView: React.FC<StockViewProps> = ({
               type="button"
               disabled={submittingAdjustment}
               onClick={() => setIsAdjustModalOpen(false)}
-              className="px-4 py-2 text-slate-600 hover:text-slate-800 font-semibold transition-colors text-xs"
+              className="px-3.5 py-1.5 border border-slate-200 text-slate-700 rounded-md hover:bg-slate-50 font-medium transition-colors text-xs cursor-pointer"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={submittingAdjustment}
-              className="inline-flex items-center gap-1.5 px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white font-semibold rounded-lg shadow-sm disabled:opacity-50 transition-all text-xs"
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-brand-600 hover:bg-brand-700 text-white font-medium rounded-md shadow-xs disabled:opacity-50 transition-colors text-xs cursor-pointer"
             >
               {submittingAdjustment ? (
                 <>

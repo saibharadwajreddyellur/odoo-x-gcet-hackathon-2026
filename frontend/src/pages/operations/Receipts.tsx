@@ -262,17 +262,17 @@ export const Receipts: React.FC<ReceiptsProps> = ({ initialProductToReceive }) =
                 <button
                   onClick={() => handleMarkReady(selectedReceipt.id)}
                   disabled={processingId === selectedReceipt.id}
-                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg text-xs shadow-xs transition-all disabled:opacity-60"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-md text-xs shadow-xs transition-colors cursor-pointer disabled:opacity-50"
                 >
-                  <PackageCheck className="w-4 h-4" />
+                  <PackageCheck className="w-3.5 h-3.5" />
                   <span>{processingId === selectedReceipt.id ? 'Processing...' : 'Mark Ready'}</span>
                 </button>
                 <button
                   onClick={() => handleCancelReceipt(selectedReceipt.id)}
                   disabled={processingId === selectedReceipt.id}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-lg text-xs font-semibold transition-colors disabled:opacity-60"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-md text-xs font-medium transition-colors cursor-pointer disabled:opacity-50"
                 >
-                  <XCircle className="w-4 h-4" />
+                  <XCircle className="w-3.5 h-3.5" />
                   <span>Cancel Receipt</span>
                 </button>
               </>
@@ -283,17 +283,17 @@ export const Receipts: React.FC<ReceiptsProps> = ({ initialProductToReceive }) =
                 <button
                   onClick={() => handleValidateReceipt(selectedReceipt.id)}
                   disabled={processingId === selectedReceipt.id}
-                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-brand-600 hover:bg-brand-700 text-white font-semibold rounded-lg text-xs shadow-xs transition-all disabled:opacity-60"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-brand-600 hover:bg-brand-700 text-white font-medium rounded-md text-xs shadow-xs transition-colors cursor-pointer disabled:opacity-50"
                 >
-                  <CheckCircle2 className="w-4 h-4" />
+                  <CheckCircle2 className="w-3.5 h-3.5" />
                   <span>{processingId === selectedReceipt.id ? 'Updating Stock...' : 'Validate & Receive'}</span>
                 </button>
                 <button
                   onClick={() => handleCancelReceipt(selectedReceipt.id)}
                   disabled={processingId === selectedReceipt.id}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-lg text-xs font-semibold transition-colors disabled:opacity-60"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-md text-xs font-medium transition-colors cursor-pointer disabled:opacity-50"
                 >
-                  <XCircle className="w-4 h-4" />
+                  <XCircle className="w-3.5 h-3.5" />
                   <span>Cancel Receipt</span>
                 </button>
               </>
@@ -302,9 +302,9 @@ export const Receipts: React.FC<ReceiptsProps> = ({ initialProductToReceive }) =
             {selectedReceipt.status === 'DONE' && (
               <button
                 onClick={() => setPrintReceipt(selectedReceipt)}
-                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-slate-850 hover:bg-slate-900 text-white font-semibold rounded-lg text-xs shadow-xs transition-all"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white font-medium rounded-md text-xs shadow-xs transition-colors cursor-pointer"
               >
-                <Printer className="w-4 h-4" />
+                <Printer className="w-3.5 h-3.5" />
                 <span>Print Goods Receipt</span>
               </button>
             )}

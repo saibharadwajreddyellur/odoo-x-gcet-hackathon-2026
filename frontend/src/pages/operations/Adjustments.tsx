@@ -90,9 +90,9 @@ export const Adjustments: React.FC = () => {
         </div>
         <button
           onClick={() => setIsModalOpen(true)}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold rounded-lg shadow-[0_1px_2px_0_rgba(0,0,0,0.05)] transition-all"
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-brand-600 hover:bg-brand-700 text-white text-xs font-medium rounded-md shadow-xs transition-colors cursor-pointer"
         >
-          <Plus className="w-4 h-4" />
+          <Plus className="w-3.5 h-3.5" />
           <span>New Stock Count Adjustment</span>
         </button>
       </div>
@@ -258,14 +258,14 @@ export const Adjustments: React.FC = () => {
             <button
               type="button"
               onClick={() => setIsModalOpen(false)}
-              className="px-3.5 py-1.5 border border-slate-200 text-slate-700 rounded-lg hover:bg-slate-50 font-medium"
+              className="px-3 py-1.5 border border-slate-200 text-slate-700 rounded-md hover:bg-slate-50 font-medium text-xs transition-colors cursor-pointer"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={submitting}
-              className="px-3.5 py-1.5 bg-brand-600 hover:bg-brand-700 text-white rounded-lg font-semibold shadow-xs transition-all"
+              className="px-3 py-1.5 bg-brand-600 hover:bg-brand-700 text-white rounded-md font-medium text-xs shadow-xs transition-colors cursor-pointer disabled:opacity-50"
             >
               {submitting ? 'Applying Adjustment...' : 'Apply Count & Write to Ledger'}
             </button>
