@@ -29,13 +29,20 @@ def send_otp_email(
     otp_code: str,
     expires_in_minutes: int = 10,
 ) -> bool:
-    """
-    Send a password-reset OTP email through Brevo's HTTPS API.
-
-    OTPs are never written to logs.
-    """
 
     api_key = os.getenv("BREVO_API_KEY", "").strip()
+
+    logger.info(
+        "Brevo API key check: present=%s, length=%d, prefix=%s",
+        bool(api_key),
+        len(api_key),
+        api_key[:8] if api_key else "NONE",
+    )
+
+    if not api_key:
+        error = "BREVO_API_KEY is not configured."
+        logger.error(error)
+        raise SMTPConfigurationError(error)
 
     if not api_key:
         error = "BREVO_API_KEY is not configured."
