@@ -130,23 +130,20 @@ The StockSense Team
         >
             <tr>
                 <td style="vertical-align: middle; padding-right: 12px;">
-                    <div
-                        style="
-                            width: 44px;
-                            height: 44px;
-                            border-radius: 12px;
-                            background: #16a34a;
-                            color: #ffffff;
-                            display: flex;
-                            align-items: center;
-                            justify-content: center;
-                            font-size: 20px;
-                            font-weight: 700;
-                        "
-                    >
-                        S
-                    </div>
-                </td>
+    <img
+        src="https://YOUR-VERCEL-DOMAIN/stocksense_logo.png"
+        width="44"
+        height="44"
+        alt="StockSense"
+        style="
+            display:block;
+            width:44px;
+            height:44px;
+            border:0;
+            border-radius:12px;
+        "
+    >
+</td>
 
                 <td style="vertical-align: middle;">
                     <div
