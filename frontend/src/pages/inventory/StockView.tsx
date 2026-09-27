@@ -31,9 +31,11 @@ interface StockRow {
 
 interface StockViewProps {
   onNavigateTab?: (tab: NavTab) => void;
+  externalSearchTerm?: string;
+  onSearchChange?: (term: string) => void;
 }
 
-export const StockView: React.FC<StockViewProps> = ({ onNavigateTab }) => {
+export const StockView: React.FC<StockViewProps> = ({ onNavigateTab, externalSearchTerm, onSearchChange }) => {
   const [products, setProducts] = useState<Product[]>([]);
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -41,7 +43,13 @@ export const StockView: React.FC<StockViewProps> = ({ onNavigateTab }) => {
   const [refreshing, setRefreshing] = useState(false);
 
   // Filters & Search
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState(externalSearchTerm || '');
+
+  useEffect(() => {
+    if (externalSearchTerm !== undefined) {
+      setSearchTerm(externalSearchTerm);
+    }
+  }, [externalSearchTerm]);
   const [categoryFilter, setCategoryFilter] = useState('');
   const [locationFilter, setLocationFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'IN_STOCK' | 'LOW_STOCK' | 'OUT_OF_STOCK' | 'RESERVED'>('ALL');

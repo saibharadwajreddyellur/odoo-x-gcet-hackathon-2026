@@ -30,123 +30,107 @@ def init_db():
             except Exception:
                 pass
 
-    # Seed initial test data if database is empty
+    # Seed canonical enterprise data only on a completely fresh database (no users yet)
     db = SessionLocal()
     try:
         if db.query(User).count() == 0:
-            logger.info("Seeding initial administrator and sample inventory data...")
-            # Demo User
-            demo_user = User(
-                email="admin@stocksense.io",
-                full_name="Alex Morgan",
-                hashed_password=get_password_hash("admin123"),
-                role="admin"
-            )
-            db.add(demo_user)
+            logger.info("Seeding initial administrator and canonical enterprise inventory...")
+            from datetime import timedelta
 
-            # Warehouses & Locations
-            wh_main = Warehouse(name="Central Logistics Hub", code="WH-CENTRAL", address="100 Enterprise Way, Hub 1")
-            wh_north = Warehouse(name="North Distribution Depot", code="WH-NORTH", address="45 Commerce Blvd")
-            db.add_all([wh_main, wh_north])
+            # --- Admin user ---
+            admin = User(email="admin@stocksense.io", full_name="Alex Morgan",
+                         hashed_password=get_password_hash("admin123"), role="admin")
+            db.add(admin)
             db.flush()
 
-            loc_1 = Location(warehouse_id=wh_main.id, name="Rack A - High Velocity", code="WH-C-RACK-A")
-            loc_2 = Location(warehouse_id=wh_main.id, name="Receiving Dock Staging", code="WH-C-DOCK-1")
-            loc_3 = Location(warehouse_id=wh_north.id, name="Depot Bay 01", code="WH-N-BAY-01")
-            db.add_all([loc_1, loc_2, loc_3])
+            # --- Warehouses & Locations ---
+            wh1 = Warehouse(name="Central Logistics Hub",    code="WH-CENTRAL", address="100 Enterprise Way, Hub 1, Industrial Estate")
+            wh2 = Warehouse(name="North Distribution Depot", code="WH-NORTH",   address="45 Commerce Blvd, North Park")
+            wh3 = Warehouse(name="South Fulfilment Centre",  code="WH-SOUTH",   address="22 Logistics Lane, South Zone")
+            db.add_all([wh1, wh2, wh3])
+            db.flush()
+            loca = Location(warehouse_id=wh1.id, name="Zone A - High Velocity Rack", code="WH-C-RACK-A")
+            locb = Location(warehouse_id=wh1.id, name="Receiving Dock / Staging",    code="WH-C-DOCK-1")
+            locc = Location(warehouse_id=wh2.id, name="Depot Bay 01 - Bulk Storage", code="WH-N-BAY-01")
+            locd = Location(warehouse_id=wh2.id, name="Depot Bay 02 - Overstock",   code="WH-N-BAY-02")
+            loce = Location(warehouse_id=wh3.id, name="Despatch Area - Outbound",    code="WH-S-DISP-1")
+            locf = Location(warehouse_id=wh3.id, name="Cold and Sensitive Storage",  code="WH-S-SENS-1")
+            db.add_all([loca, locb, locc, locd, loce, locf])
             db.flush()
 
-            # Categories
-            cat_elec = Category(name="Electronics & Sensors", description="Precision IoT and microcontroller boards")
-            cat_pack = Category(name="Packaging & Storage", description="Industrial containers and boxes")
-            cat_tools = Category(name="Hardware & Tools", description="Assembly and maintenance tools")
-            db.add_all([cat_elec, cat_pack, cat_tools])
+            # --- 5 Canonical Categories ---
+            cat_es = Category(name="Electronics & Sensors",   description="Precision IoT modules, microcontrollers, sensors and scanning equipment")
+            cat_ec = Category(name="Electrical Components",   description="Power supplies, relays, circuit breakers and wiring accessories")
+            cat_ht = Category(name="Hardware & Tools",        description="Fasteners, precision tools, hand tools and maintenance hardware")
+            cat_ps = Category(name="Packaging & Storage",     description="Industrial containers, label consumables, boxes and storage systems")
+            cat_ie = Category(name="Industrial Equipment",    description="Pneumatic, hydraulic and conveyor equipment for production lines")
+            db.add_all([cat_es, cat_ec, cat_ht, cat_ps, cat_ie])
             db.flush()
 
-            # Products
-            p1 = Product(
-                name="Smart RFID Scanner Wand",
-                sku="SS-WAND-001",
-                category_id=cat_elec.id,
-                uom="Units",
-                unit_price=185.00,
-                initial_stock=45,
-                min_stock_alert=15,
-                reorder_quantity=30,
-                description="Long-range wireless barcode and RFID inventory scanner"
-            )
-            p2 = Product(
-                name="Thermal Label Roll (4x6)",
-                sku="SS-LBL-4X6",
-                category_id=cat_pack.id,
-                uom="Rolls",
-                unit_price=12.50,
-                initial_stock=8,
-                min_stock_alert=20,  # LOW STOCK trigger
-                reorder_quantity=100,
-                description="Direct thermal shipping label rolls (500 labels/roll)"
-            )
-            p3 = Product(
-                name="Heavy Duty Storage Bin (60L)",
-                sku="SS-BIN-60L",
-                category_id=cat_pack.id,
-                uom="Units",
-                unit_price=24.00,
-                initial_stock=0,  # OUT OF STOCK trigger
-                min_stock_alert=10,
-                reorder_quantity=50,
-                description="Stackable impact-resistant polypropylene container"
-            )
-            p4 = Product(
-                name="Precision Caliper Digital 150mm",
-                sku="SS-CALIPER-150",
-                category_id=cat_tools.id,
-                uom="Units",
-                unit_price=45.00,
-                initial_stock=32,
-                min_stock_alert=5,
-                reorder_quantity=20,
-                description="Stainless steel digital caliper with LCD screen"
-            )
-            db.add_all([p1, p2, p3, p4])
+            # --- 22 Canonical Products (SS-{CODE}-{4D} SKU) ---
+            prods = [
+                Product(name="ESP32 Development Board",          sku="SS-ES-0001", category_id=cat_es.id, uom="Units",  unit_price=18.50,  min_stock_alert=20, reorder_quantity=50,  description="Dual-core Wi-Fi/BT microcontroller for IoT prototyping"),
+                Product(name="Industrial RFID Scanner Wand",     sku="SS-ES-0002", category_id=cat_es.id, uom="Units",  unit_price=185.00, min_stock_alert=10, reorder_quantity=20,  description="Long-range wireless RFID/barcode handheld scanner"),
+                Product(name="Proximity Sensor NPN 12mm",        sku="SS-ES-0003", category_id=cat_es.id, uom="Units",  unit_price=14.75,  min_stock_alert=25, reorder_quantity=60,  description="Inductive proximity sensor, NPN NO, 12mm barrel"),
+                Product(name="Industrial Temperature Sensor PT100", sku="SS-ES-0004", category_id=cat_es.id, uom="Units", unit_price=38.00, min_stock_alert=15, reorder_quantity=30, description="PT100 RTD temperature probe -50 to 400 deg C"),
+                Product(name="Machine Vision Camera 5MP",        sku="SS-ES-0005", category_id=cat_es.id, uom="Units",  unit_price=320.00, min_stock_alert=5,  reorder_quantity=10,  description="GigE Vision 5MP monochrome industrial camera"),
+                Product(name="24V DC Industrial Power Supply",   sku="SS-EC-0001", category_id=cat_ec.id, uom="Units",  unit_price=74.00,  min_stock_alert=10, reorder_quantity=20,  description="DIN-rail mount 24VDC 10A SMPS power supply"),
+                Product(name="Industrial Relay Module 10A",      sku="SS-EC-0002", category_id=cat_ec.id, uom="Units",  unit_price=9.20,   min_stock_alert=30, reorder_quantity=100, description="Plug-in relay module, 10A SPDT, 24VDC coil"),
+                Product(name="Circuit Breaker MCB 16A",          sku="SS-EC-0003", category_id=cat_ec.id, uom="Units",  unit_price=8.50,   min_stock_alert=20, reorder_quantity=80,  description="DIN-rail MCB, 16A, 1-pole, Type C curve"),
+                Product(name="DIN Rail Terminal Block 4mm2",     sku="SS-EC-0004", category_id=cat_ec.id, uom="Packs",  unit_price=3.40,   min_stock_alert=50, reorder_quantity=200, description="Screw terminal block, 4mm2, pack of 10"),
+                Product(name="Shielded Cable 4-core 1.5mm2",    sku="SS-EC-0005", category_id=cat_ec.id, uom="Metres", unit_price=2.80,   min_stock_alert=100,reorder_quantity=500, description="LSZH shielded multi-core control cable"),
+                Product(name="M6 Hex Bolt Set Grade 8.8",        sku="SS-HT-0001", category_id=cat_ht.id, uom="Sets",   unit_price=6.50,   min_stock_alert=40, reorder_quantity=150, description="M6x25mm hex bolt, washer and nut kit (50-piece)"),
+                Product(name="Digital Caliper 150mm Stainless",  sku="SS-HT-0002", category_id=cat_ht.id, uom="Units",  unit_price=44.00,  min_stock_alert=5,  reorder_quantity=15,  description="IP54 stainless steel digital vernier caliper"),
+                Product(name="Stainless Steel Cable Ties 300mm", sku="SS-HT-0003", category_id=cat_ht.id, uom="Packs",  unit_price=7.80,   min_stock_alert=20, reorder_quantity=100, description="Marine-grade SS316 cable ties, pack of 50"),
+                Product(name="Torque Wrench 5 to 25Nm",          sku="SS-HT-0004", category_id=cat_ht.id, uom="Units",  unit_price=62.00,  min_stock_alert=5,  reorder_quantity=10,  description="Click-type torque wrench with reversible ratchet"),
+                Product(name="Safety Industrial Gloves Cut-5",   sku="SS-HT-0005", category_id=cat_ht.id, uom="Pairs",  unit_price=4.10,   min_stock_alert=50, reorder_quantity=200, description="ANSI A5 cut-resistant work gloves, size L"),
+                Product(name="Heavy Duty Storage Bin 60L",       sku="SS-PS-0001", category_id=cat_ps.id, uom="Units",  unit_price=24.00,  min_stock_alert=10, reorder_quantity=50,  description="Stackable polypropylene bin, 60L, with lid"),
+                Product(name="Thermal Label Roll 4x6 inch",      sku="SS-PS-0002", category_id=cat_ps.id, uom="Rolls",  unit_price=12.50,  min_stock_alert=20, reorder_quantity=100, description="Direct thermal shipping labels, 500/roll, 4x6 inch"),
+                Product(name="Corrugated Shipping Box 400x300",  sku="SS-PS-0003", category_id=cat_ps.id, uom="Units",  unit_price=1.80,   min_stock_alert=100,reorder_quantity=500, description="Single-wall corrugated box, ECT-32, flat-pack"),
+                Product(name="Anti-Static Bubble Wrap 50m",      sku="SS-PS-0004", category_id=cat_ps.id, uom="Rolls",  unit_price=28.00,  min_stock_alert=10, reorder_quantity=30,  description="Pink anti-static 500mm x 50m bubble wrap roll"),
+                Product(name="Pneumatic Solenoid Valve 5/2",     sku="SS-IE-0001", category_id=cat_ie.id, uom="Units",  unit_price=52.00,  min_stock_alert=8,  reorder_quantity=20,  description="5/2-way bistable solenoid valve, 24VDC, G1/4"),
+                Product(name="Conveyor Belt Roller 500mm",        sku="SS-IE-0002", category_id=cat_ie.id, uom="Units",  unit_price=31.50,  min_stock_alert=10, reorder_quantity=30,  description="Steel idler conveyor roller, 50mm x 500mm"),
+                Product(name="Industrial Safety Light Curtain",   sku="SS-IE-0003", category_id=cat_ie.id, uom="Units",  unit_price=480.00, min_stock_alert=3,  reorder_quantity=6,   description="Type-4 SIL2 safety light curtain, 1200mm height"),
+            ]
+            db.add_all(prods)
             db.flush()
 
-            # Initial stock levels
-            sl1 = StockLevel(product_id=p1.id, location_id=loc_1.id, quantity_on_hand=45)
-            sl2 = StockLevel(product_id=p2.id, location_id=loc_1.id, quantity_on_hand=8)
-            sl3 = StockLevel(product_id=p3.id, location_id=loc_2.id, quantity_on_hand=0)
-            sl4 = StockLevel(product_id=p4.id, location_id=loc_3.id, quantity_on_hand=32)
-            db.add_all([sl1, sl2, sl3, sl4])
-            db.flush()
-
-            # Initial Ledger Records
-            for p, sl in [(p1, sl1), (p2, sl2), (p4, sl4)]:
-                if sl.quantity_on_hand > 0:
+            # Seed representative opening stock levels + ledger
+            pm = {p.sku: p for p in prods}
+            seed_stock = [
+                ("SS-ES-0001", loca, 100), ("SS-ES-0002", locf, 30),
+                ("SS-ES-0003", loca, 150), ("SS-ES-0004", locf, 60),
+                ("SS-ES-0005", locf, 12),  ("SS-EC-0001", locb, 40),
+                ("SS-EC-0002", loca, 200), ("SS-EC-0003", locb, 120),
+                ("SS-EC-0004", locc, 500), ("SS-EC-0005", loca, 300),
+                ("SS-HT-0001", loca, 200), ("SS-HT-0002", locf, 25),
+                ("SS-HT-0003", loca, 150), ("SS-HT-0004", locc, 20),
+                ("SS-HT-0005", locc, 300), ("SS-PS-0001", locc, 80),
+                ("SS-PS-0002", loca, 200), ("SS-PS-0003", locd, 1000),
+                ("SS-PS-0004", locc, 50),  ("SS-IE-0001", locc, 40),
+                ("SS-IE-0002", locd, 60),  ("SS-IE-0003", locf, 5),
+            ]
+            for sku, loc_obj, qty in seed_stock:
+                p = pm[sku]
+                sl = StockLevel(product_id=p.id, location_id=loc_obj.id, quantity_on_hand=qty)
+                db.add(sl)
+                if qty > 0:
                     db.add(StockLedger(
-                        product_id=p.id,
-                        location_id=sl.location_id,
-                        change_qty=sl.quantity_on_hand,
-                        balance_after=sl.quantity_on_hand,
-                        action_type="INITIAL",
-                        reference_doc_type="SystemInit",
-                        reference_doc_number=p.sku,
-                        notes="Initial system seed inventory"
+                        product_id=p.id, location_id=loc_obj.id,
+                        change_qty=qty, balance_after=qty,
+                        action_type="INITIAL", reference_doc_type="SystemInit",
+                        reference_doc_number=p.sku, notes="Opening stock — enterprise seed",
                     ))
 
             db.commit()
-            logger.info("Database initialized and sample data seeded successfully.")
+            logger.info("Canonical enterprise data seeded successfully.")
 
-        # Ensure demo Warehouse Staff account exists for RBAC
+        # Ensure Warehouse Staff account exists
         staff_user = db.query(User).filter(User.email == "staff@stocksense.io").first()
         if not staff_user:
-            staff_user = User(
-                email="staff@stocksense.io",
-                full_name="Sam Taylor",
-                hashed_password=get_password_hash("staff123"),
-                role="warehouse_staff",
-                is_active=True
-            )
-            db.add(staff_user)
+            db.add(User(email="staff@stocksense.io", full_name="Sam Taylor",
+                        hashed_password=get_password_hash("staff123"),
+                        role="warehouse_staff", is_active=True))
             db.commit()
             logger.info("Warehouse staff account 'staff@stocksense.io' ensured.")
     except Exception as e:
@@ -154,6 +138,7 @@ def init_db():
         db.rollback()
     finally:
         db.close()
+
 
 
 @asynccontextmanager

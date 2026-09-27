@@ -22,7 +22,7 @@ const MainApp: React.FC = () => {
   const [authView, setAuthView] = useState<'LOGIN' | 'SIGNUP' | 'FORGOT'>('LOGIN');
   const [currentTab, setCurrentTab] = useState<NavTab>('dashboard');
   const [quickReceiptProduct, setQuickReceiptProduct] = useState<Product | null>(null);
-
+  const [globalSearch, setGlobalSearch] = useState('');
 
   // If not logged in, show auth screens
   if (!isAuthenticated) {
@@ -42,7 +42,16 @@ const MainApp: React.FC = () => {
 
   return (
     <div className="h-screen bg-slate-50 flex flex-col font-sans text-slate-900 antialiased overflow-hidden">
-      <Navbar onNavigateProfile={() => setCurrentTab('profile')} />
+      <Navbar
+        searchTerm={globalSearch}
+        onSearchChange={(val) => {
+          setGlobalSearch(val);
+          if (currentTab !== 'products' && currentTab !== 'stock' && val.trim().length > 0) {
+            setCurrentTab('products');
+          }
+        }}
+        onNavigateProfile={() => setCurrentTab('profile')}
+      />
 
       <div className="flex flex-1 overflow-hidden">
         <Sidebar
@@ -63,9 +72,21 @@ const MainApp: React.FC = () => {
               />
             )}
 
-            {currentTab === 'stock' && <StockView onNavigateTab={setCurrentTab} />}
+            {currentTab === 'stock' && (
+              <StockView
+                onNavigateTab={setCurrentTab}
+                externalSearchTerm={globalSearch}
+                onSearchChange={setGlobalSearch}
+              />
+            )}
 
-            {currentTab === 'products' && <ProductList onNavigateTab={setCurrentTab} />}
+            {currentTab === 'products' && (
+              <ProductList
+                onNavigateTab={setCurrentTab}
+                externalSearchTerm={globalSearch}
+                onSearchChange={setGlobalSearch}
+              />
+            )}
 
             {currentTab === 'receipts' && (
               <Receipts initialProductToReceive={quickReceiptProduct} />

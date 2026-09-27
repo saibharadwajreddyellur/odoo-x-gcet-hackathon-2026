@@ -114,6 +114,7 @@ class TransferCreate(BaseModel):
     source_location_id: int
     dest_location_id: int
     scheduled_date: Optional[datetime] = None
+    status: Optional[str] = "DRAFT"
     notes: Optional[str] = None
     items: List[TransferItemCreate]
 

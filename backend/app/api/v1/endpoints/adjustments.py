@@ -3,6 +3,8 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session, joinedload
 from app.api.deps import get_db, get_current_user
 from app.models.adjustment import StockAdjustment
+from app.models.product import Product
+from app.models.warehouse import Location
 from app.models.user import User
 from app.schemas.movement import AdjustmentCreate, AdjustmentOut
 from app.services.inventory_engine import record_adjustment
@@ -50,6 +52,22 @@ def create_stock_adjustment(
     - Updates location stock level to physically counted quantity
     - Generates immutable audit record in StockLedger
     """
+    # 1. Validate product exists
+    product = db.query(Product).filter(Product.id == adj_in.product_id).first()
+    if not product:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Product with id {adj_in.product_id} not found"
+        )
+
+    # 2. Validate location exists
+    location = db.query(Location).filter(Location.id == adj_in.location_id).first()
+    if not location:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Location with id {adj_in.location_id} not found"
+        )
+
     adj_by = adj_in.adjusted_by or (user.full_name if user else "Inventory Staff")
     adjustment = record_adjustment(
         db=db,

@@ -5,11 +5,12 @@ import {
 } from 'lucide-react';
 
 interface NavbarProps {
+  searchTerm?: string;
   onSearchChange?: (term: string) => void;
   onNavigateProfile?: () => void;
 }
 
-export const Navbar: React.FC<NavbarProps> = ({ onSearchChange, onNavigateProfile }) => {
+export const Navbar: React.FC<NavbarProps> = ({ searchTerm, onSearchChange, onNavigateProfile }) => {
   const { user, logout, isManager } = useAuth();
   const [showProfileMenu, setShowProfileMenu] = useState(false);
 
@@ -42,6 +43,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onSearchChange, onNavigateProfil
           <input
             type="text"
             placeholder="Search by SKU, product name, or document #..."
+            value={searchTerm ?? ''}
             onChange={(e) => onSearchChange?.(e.target.value)}
             className="w-full pl-9 pr-4 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all placeholder:text-slate-400"
           />

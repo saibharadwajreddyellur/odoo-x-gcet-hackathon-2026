@@ -648,6 +648,22 @@ export const api = {
     return mockStore.transfers;
   },
 
+  async getTransfer(transferId: number): Promise<InternalTransfer> {
+    try {
+      const res = await apiFetch(`${API_BASE_URL}/transfers/${transferId}`);
+      if (res.ok) return await res.json();
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.detail || 'Transfer not found');
+      }
+    } catch (e: any) {
+      if (e && !isNetworkOrTimeoutError(e)) throw e;
+    }
+    const transfer = mockStore.transfers.find(t => t.id === transferId);
+    if (!transfer) throw new Error('Transfer not found');
+    return transfer;
+  },
+
   async createTransfer(transferData: any): Promise<InternalTransfer> {
     try {
       const res = await apiFetch(`${API_BASE_URL}/transfers`, {
@@ -655,7 +671,13 @@ export const api = {
         body: JSON.stringify(transferData)
       });
       if (res.ok) return await res.json();
-    } catch { }
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.detail || 'Failed to create transfer');
+      }
+    } catch (e: any) {
+      if (e && !isNetworkOrTimeoutError(e)) throw e;
+    }
 
     const newId = mockStore.transfers.length + 1;
     const newTransfer: InternalTransfer = {
@@ -663,7 +685,7 @@ export const api = {
       transfer_number: `TRF-${new Date().getFullYear()}-${String(newId).padStart(4, '0')}`,
       source_location_id: Number(transferData.source_location_id),
       dest_location_id: Number(transferData.dest_location_id),
-      status: 'SCHEDULED',
+      status: transferData.status || 'DRAFT',
       scheduled_date: transferData.scheduled_date || new Date().toISOString(),
       notes: transferData.notes || '',
       created_at: new Date().toISOString(),
@@ -682,13 +704,62 @@ export const api = {
     return newTransfer;
   },
 
+  async scheduleTransfer(transferId: number): Promise<InternalTransfer> {
+    try {
+      const res = await apiFetch(`${API_BASE_URL}/transfers/${transferId}/schedule`, {
+        method: 'POST'
+      });
+      if (res.ok) return await res.json();
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.detail || 'Failed to schedule transfer');
+      }
+    } catch (e: any) {
+      if (e && !isNetworkOrTimeoutError(e)) throw e;
+    }
+
+    const transfer = mockStore.transfers.find(t => t.id === transferId);
+    if (!transfer) throw new Error('Transfer not found');
+    if (transfer.status === 'COMPLETED') throw new Error('Cannot schedule a completed transfer');
+    if (transfer.status === 'CANCELLED') throw new Error('Cannot schedule a cancelled transfer');
+    transfer.status = 'SCHEDULED';
+    return transfer;
+  },
+
+  async cancelTransfer(transferId: number): Promise<InternalTransfer> {
+    try {
+      const res = await apiFetch(`${API_BASE_URL}/transfers/${transferId}/cancel`, {
+        method: 'POST'
+      });
+      if (res.ok) return await res.json();
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.detail || 'Failed to cancel transfer');
+      }
+    } catch (e: any) {
+      if (e && !isNetworkOrTimeoutError(e)) throw e;
+    }
+
+    const transfer = mockStore.transfers.find(t => t.id === transferId);
+    if (!transfer) throw new Error('Transfer not found');
+    if (transfer.status === 'COMPLETED') throw new Error('Cannot cancel a completed transfer');
+    transfer.status = 'CANCELLED';
+    return transfer;
+  },
+
   async completeTransfer(transferId: number): Promise<InternalTransfer> {
     try {
       const res = await apiFetch(`${API_BASE_URL}/transfers/${transferId}/complete`, {
         method: 'POST'
       });
       if (res.ok) return await res.json();
-    } catch { }
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.detail || 'Transfer completion failed');
+      }
+    } catch (e: any) {
+      if (e && !isNetworkOrTimeoutError(e)) throw e;
+    }
 
     const transfer = mockStore.transfers.find(t => t.id === transferId);
     if (!transfer) throw new Error('Transfer not found');

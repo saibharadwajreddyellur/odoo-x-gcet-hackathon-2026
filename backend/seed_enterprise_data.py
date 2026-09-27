@@ -67,7 +67,30 @@ db.query(Location).delete()
 db.query(Warehouse).delete()
 db.query(Category).delete()
 db.commit()
-print("   Done — all business tables cleared.")
+
+# Reset sequences so canonical entities start deterministically from ID 1
+sequences_to_reset = [
+    "categories_id_seq",
+    "warehouses_id_seq",
+    "locations_id_seq",
+    "products_id_seq",
+    "receipts_id_seq",
+    "receipt_items_id_seq",
+    "deliveries_id_seq",
+    "delivery_items_id_seq",
+    "internal_transfers_id_seq",
+    "transfer_items_id_seq",
+    "stock_adjustments_id_seq",
+    "stock_ledger_id_seq",
+    "stock_levels_id_seq",
+]
+for seq in sequences_to_reset:
+    try:
+        db.execute(text(f"ALTER SEQUENCE {seq} RESTART WITH 1"))
+    except Exception as e:
+        print(f"   Warning: could not restart {seq}: {e}")
+db.commit()
+print("   Done — all business tables cleared and sequences reset to 1.")
 
 
 # ---------------------------------------------------------------------------
@@ -190,45 +213,7 @@ print(f"   {len(prod_map)} products created.")
 # ---------------------------------------------------------------------------
 # STEP 5 — Historical Operations
 # ---------------------------------------------------------------------------
-# We track running stock per (product_id, location_id) for ledger/stock_level accuracy
-stock_balance = {}  # (product_id, location_id) -> int
-
-def add_stock(prod, loc_obj, qty):
-    key = (prod.id, loc_obj.id)
-    stock_balance[key] = stock_balance.get(key, 0) + qty
-
-def sub_stock(prod, loc_obj, qty):
-    key = (prod.id, loc_obj.id)
-    stock_balance[key] = stock_balance.get(key, 0) - qty
-
-def get_balance(prod, loc_obj):
-    return stock_balance.get((prod.id, loc_obj.id), 0)
-
-ledger_entries = []
-
-def ledger(prod, loc_obj, change, action, ref_type, ref_num, ts, notes=""):
-    balance = get_balance(prod, loc_obj)
-    if change > 0:
-        add_stock(prod, loc_obj, change)
-    else:
-        sub_stock(prod, loc_obj, -change)
-    bal_after = get_balance(prod, loc_obj)
-    ledger_entries.append(StockLedger(
-        timestamp=ts,
-        product_id=prod.id,
-        location_id=loc_obj.id,
-        change_qty=change,
-        balance_after=bal_after,
-        action_type=action,
-        reference_doc_type=ref_type,
-        reference_doc_number=ref_num,
-        notes=notes,
-    ))
-
-
-# ------------------------------------------------------------------
 # Shortcuts for product references
-# ------------------------------------------------------------------
 es1 = prod_map["SS-ES-0001"]   # ESP32 Board
 es2 = prod_map["SS-ES-0002"]   # RFID Scanner
 es3 = prod_map["SS-ES-0003"]   # Proximity Sensor
@@ -257,12 +242,12 @@ ie2 = prod_map["SS-IE-0002"]   # Conveyor Roller
 ie3 = prod_map["SS-IE-0003"]   # Safety Light Curtain
 
 # Location shortcuts
-ca   = loc["c_a"]       # WH-CENTRAL Rack A
-dock = loc["c_dock"]    # WH-CENTRAL Dock
-nb1  = loc["n_bay1"]    # WH-NORTH Bay 1
-nb2  = loc["n_bay2"]    # WH-NORTH Bay 2
-sd   = loc["s_disp"]    # WH-SOUTH Despatch
-ss   = loc["s_sens"]    # WH-SOUTH Sensitive
+ca   = loc["c_a"]       # WH-CENTRAL Rack A (loc 1)
+dock = loc["c_dock"]    # WH-CENTRAL Dock (loc 2)
+nb1  = loc["n_bay1"]    # WH-NORTH Bay 1 (loc 3)
+nb2  = loc["n_bay2"]    # WH-NORTH Bay 2 (loc 4)
+sd   = loc["s_disp"]    # WH-SOUTH Despatch (loc 5)
+ss   = loc["s_sens"]    # WH-SOUTH Sensitive (loc 6)
 
 admin_user = db.query(User).filter(User.role == "admin").first()
 staff_user = db.query(User).filter(User.role == "warehouse_staff").first()
@@ -281,16 +266,16 @@ receipts_def = [
      [(ec1, dock, 40, 68.00), (ec3, dock, 120, 7.20), (ec4, nb1, 500, 2.80)]),
 
     ("REC-2026-003", "FastPack Industrial",         "DONE", 70, dago(70),
-     [(ps1, nb1, 80, 20.00), (ps2, ca, 200, 10.00), (ps3, nb2, 1000, 1.50)]),
+     [(ps1, nb1, 80, 20.00), (ps2, ca, 200, 10.00), (ps3, nb1, 500, 1.50), (ps3, nb2, 500, 1.50)]),
 
     ("REC-2026-004", "HandTool Depot Europe",       "DONE", 62, dago(62),
-     [(ht1, ca, 200, 5.00), (ht3, ca, 150, 6.50), (ht5, nb1, 300, 3.20)]),
+     [(ht1, ca, 100, 5.00), (ht1, nb2, 100, 5.00), (ht3, ca, 150, 6.50), (ht5, nb1, 300, 3.20)]),
 
     ("REC-2026-005", "PneumaTech Systems",          "DONE", 55, dago(55),
      [(ie1, nb1, 40, 44.00), (ie2, nb2, 60, 26.00)]),
 
     ("REC-2026-006", "TechSource Components Ltd",   "DONE", 48, dago(48),
-     [(es2, ss, 30, 160.00), (es4, ss, 60, 32.00), (es5, ss, 12, 280.00)]),
+     [(es2, ss, 30, 160.00), (es4, ca, 30, 32.00), (es4, ss, 30, 32.00), (es5, ss, 12, 280.00)]),
 
     ("REC-2026-007", "FastPack Industrial",         "DONE", 40, dago(40),
      [(ps4, nb1, 50, 24.00), (ps2, ca, 150, 10.00), (ps3, nb2, 500, 1.50)]),
@@ -314,7 +299,6 @@ receipts_def = [
      [(ec3, dock, 100, 7.20), (ht5, nb1, 200, 3.20)]),
 ]
 
-rec_objs = {}
 for rec_num, supplier, status, days_ago, date, items in receipts_def:
     validated_at = date + timedelta(hours=3) if status == "DONE" else None
     rec = Receipt(
@@ -329,28 +313,17 @@ for rec_num, supplier, status, days_ago, date, items in receipts_def:
         validated_at=validated_at,
     )
     db.add(rec)
-    rec_objs[rec_num] = (rec, items, status)
-
-db.flush()
-
-# Create items and ledger for DONE receipts
-for rec_num, (rec, items, status) in rec_objs.items():
+    db.flush()
     for prod, loc_obj, qty, unit_cost in items:
-        ri = ReceiptItem(
+        db.add(ReceiptItem(
             receipt_id=rec.id,
             product_id=prod.id,
             location_id=loc_obj.id,
             quantity=qty,
             unit_cost=unit_cost,
-        )
-        db.add(ri)
-        if status == "DONE":
-            ts = rec.validated_at or rec.receipt_date
-            ledger(prod, loc_obj, qty, "RECEIPT", "Receipt", rec_num, ts,
-                   f"Stock received from {rec.supplier_name}")
+        ))
 
 db.flush()
-
 
 # ------------------------------------------------------------------
 # DELIVERIES — decreases stock
@@ -369,7 +342,7 @@ deliveries_def = [
      "Warehouse 12, Dock Lane, Bristol BS2 0QU",
      [(ps2, ca, 60), (ps3, nb2, 300)]),
 
-    ("DEL-2026-004", "Delta Tech Systems",      "DONE", dago(60),
+    ("DEL-2026-004", "Delta Tech Systems",      "DONE", dago(46),
      "42 Innovation Drive, Cambridge CB1 1PQ",
      [(es2, ss, 5), (es4, ss, 15)]),
 
@@ -381,19 +354,19 @@ deliveries_def = [
      "Southern Hub, Southampton SO14 3PT",
      [(ps1, nb1, 20), (ie2, nb2, 15)]),
 
-    ("DEL-2026-007", "Nexus Automation Ltd",    "DONE", dago(38),
+    ("DEL-2026-007", "Nexus Automation Ltd",    "DONE", dago(20),
      "Nexus Industrial Park, Sheffield S9 1TW",
      [(ec5, ca, 80), (ec2, ca, 60)]),
 
-    ("DEL-2026-008", "GlobalFreight Partners",  "DONE", dago(30),
+    ("DEL-2026-008", "GlobalFreight Partners",  "DONE", dago(10),
      "Terminal 4, Heathrow Cargo, TW6 2GW",
      [(es5, ss, 3), (ie3, ss, 1)]),
 
-    ("DEL-2026-009", "Acme Manufacturing Co",   "DONE", dago(22),
+    ("DEL-2026-009", "Acme Manufacturing Co",   "DONE", dago(16),
      "Unit 5, Factory Road, Leeds LS1 2AB",
      [(es1, ca, 30), (ec2, ca, 40), (ht5, nb1, 80)]),
 
-    ("DEL-2026-010", "Delta Tech Systems",      "DONE", dago(16),
+    ("DEL-2026-010", "Delta Tech Systems",      "DONE", dago(14),
      "42 Innovation Drive, Cambridge CB1 1PQ",
      [(ec4, nb1, 100), (es3, nb1, 40)]),
 
@@ -414,7 +387,6 @@ deliveries_def = [
      [(ie2, nb2, 5), (ie1, nb1, 3)]),
 ]
 
-del_objs = {}
 for del_num, customer, status, date, addr, items in deliveries_def:
     validated_at = date + timedelta(hours=4) if status == "DONE" else None
     d = Delivery(
@@ -430,26 +402,16 @@ for del_num, customer, status, date, addr, items in deliveries_def:
         validated_at=validated_at,
     )
     db.add(d)
-    del_objs[del_num] = (d, items, status)
-
-db.flush()
-
-for del_num, (d, items, status) in del_objs.items():
+    db.flush()
     for prod, loc_obj, qty in items:
-        di = DeliveryItem(
+        db.add(DeliveryItem(
             delivery_id=d.id,
             product_id=prod.id,
             location_id=loc_obj.id,
             quantity=qty,
-        )
-        db.add(di)
-        if status == "DONE":
-            ts = d.validated_at or d.delivery_date
-            ledger(prod, loc_obj, -qty, "DELIVERY", "Delivery", del_num, ts,
-                   f"Stock despatched to {d.customer_name}")
+        ))
 
 db.flush()
-
 
 # ------------------------------------------------------------------
 # INTERNAL TRANSFERS — moves stock between locations
@@ -486,25 +448,16 @@ for trf_num, src, dst, status, date, items in transfers_def:
         dest_location_id=dst.id,
         status=status,
         scheduled_date=date,
-        notes=f"Internal transfer {trf_num}: {src.code} → {dst.code}",
+        notes=f"Internal transfer {trf_num}: {src.code} -> {dst.code}",
         created_at=date - timedelta(hours=1),
         completed_at=completed_at,
     )
     db.add(t)
     db.flush()
-
     for prod, qty in items:
-        ti = TransferItem(transfer_id=t.id, product_id=prod.id, quantity=qty)
-        db.add(ti)
-        if status == "COMPLETED":
-            ts = completed_at or date
-            ledger(prod, src, -qty, "TRANSFER_OUT", "Transfer", trf_num, ts,
-                   f"Transfer out to {dst.code}")
-            ledger(prod, dst, qty, "TRANSFER_IN", "Transfer", trf_num, ts + timedelta(minutes=5),
-                   f"Transfer in from {src.code}")
+        db.add(TransferItem(transfer_id=t.id, product_id=prod.id, quantity=qty))
 
 db.flush()
-
 
 # ------------------------------------------------------------------
 # STOCK ADJUSTMENTS — reconcile physical vs system
@@ -541,7 +494,7 @@ adjustments_def = [
 
 for adj_num, prod, loc_obj, recorded, counted, reason, notes_txt, date in adjustments_def:
     diff = counted - recorded
-    adj = StockAdjustment(
+    db.add(StockAdjustment(
         adjustment_number=adj_num,
         product_id=prod.id,
         location_id=loc_obj.id,
@@ -552,35 +505,123 @@ for adj_num, prod, loc_obj, recorded, counted, reason, notes_txt, date in adjust
         notes=notes_txt,
         adjusted_by="Admin — Warehouse Count",
         created_at=date,
-    )
-    db.add(adj)
-    if diff != 0:
-        ledger(prod, loc_obj, diff, "ADJUSTMENT", "Adjustment", adj_num, date, notes_txt)
+    ))
 
 db.flush()
 print("   Receipts, deliveries, transfers and adjustments created.")
 
 
 # ------------------------------------------------------------------
-# STEP 6 — Write StockLevel records from computed balances
+# STEP 6 — Chronological Replay for Ledger & StockLevel consistency
 # ------------------------------------------------------------------
-print("[6/7] Writing stock_levels from computed balances ...")
+print("[6/7] Replaying operations in chronological order for ledger and stock_levels ...")
 
+events = []
+
+# Receipts DONE
+for rec in db.query(Receipt).filter(Receipt.status == "DONE").all():
+    ts = rec.validated_at or rec.receipt_date
+    for ri in db.query(ReceiptItem).filter(ReceiptItem.receipt_id == rec.id).all():
+        events.append(dict(
+            timestamp=ts,
+            product_id=ri.product_id,
+            location_id=ri.location_id,
+            change_qty=ri.quantity,
+            action_type="RECEIPT",
+            reference_doc_type="Receipt",
+            reference_doc_number=rec.receipt_number,
+            notes=f"Stock received from {rec.supplier_name}",
+        ))
+
+# Deliveries DONE
+for d in db.query(Delivery).filter(Delivery.status == "DONE").all():
+    ts = d.validated_at or d.delivery_date
+    for di in db.query(DeliveryItem).filter(DeliveryItem.delivery_id == d.id).all():
+        events.append(dict(
+            timestamp=ts,
+            product_id=di.product_id,
+            location_id=di.location_id,
+            change_qty=-di.quantity,
+            action_type="DELIVERY",
+            reference_doc_type="Delivery",
+            reference_doc_number=d.delivery_number,
+            notes=f"Stock despatched to {d.customer_name}",
+        ))
+
+# InternalTransfers COMPLETED
+for t in db.query(InternalTransfer).filter(InternalTransfer.status == "COMPLETED").all():
+    ts = t.completed_at or t.scheduled_date
+    src_loc = db.query(Location).filter(Location.id == t.source_location_id).first()
+    dst_loc = db.query(Location).filter(Location.id == t.dest_location_id).first()
+    src_code = src_loc.code if src_loc else f"loc {t.source_location_id}"
+    dst_code = dst_loc.code if dst_loc else f"loc {t.dest_location_id}"
+    for ti in db.query(TransferItem).filter(TransferItem.transfer_id == t.id).all():
+        events.append(dict(
+            timestamp=ts,
+            product_id=ti.product_id,
+            location_id=t.source_location_id,
+            change_qty=-ti.quantity,
+            action_type="TRANSFER_OUT",
+            reference_doc_type="Transfer",
+            reference_doc_number=t.transfer_number,
+            notes=f"Transfer out to {dst_code}",
+        ))
+        events.append(dict(
+            timestamp=ts + timedelta(minutes=5),
+            product_id=ti.product_id,
+            location_id=t.dest_location_id,
+            change_qty=ti.quantity,
+            action_type="TRANSFER_IN",
+            reference_doc_type="Transfer",
+            reference_doc_number=t.transfer_number,
+            notes=f"Transfer in from {src_code}",
+        ))
+
+# StockAdjustments
+for adj in db.query(StockAdjustment).all():
+    if adj.diff_qty != 0:
+        events.append(dict(
+            timestamp=adj.created_at,
+            product_id=adj.product_id,
+            location_id=adj.location_id,
+            change_qty=adj.diff_qty,
+            action_type="ADJUSTMENT",
+            reference_doc_type="Adjustment",
+            reference_doc_number=adj.adjustment_number,
+            notes=adj.notes or adj.reason or "Stock Adjustment",
+        ))
+
+# Sort all events chronologically
+events.sort(key=lambda x: x["timestamp"])
+
+stock_balance = {}
+for ev in events:
+    key = (ev["product_id"], ev["location_id"])
+    stock_balance[key] = stock_balance.get(key, 0) + ev["change_qty"]
+    db.add(StockLedger(
+        timestamp=ev["timestamp"],
+        product_id=ev["product_id"],
+        location_id=ev["location_id"],
+        change_qty=ev["change_qty"],
+        balance_after=stock_balance[key],
+        action_type=ev["action_type"],
+        reference_doc_type=ev["reference_doc_type"],
+        reference_doc_number=ev["reference_doc_number"],
+        notes=ev["notes"],
+    ))
+
+# Write stock_levels from computed balances
 for (product_id, location_id), qty in stock_balance.items():
-    sl = StockLevel(
-        product_id=product_id,
-        location_id=location_id,
-        quantity_on_hand=max(0, qty),   # clamp negatives (shouldn't occur)
-        reserved_quantity=0,
-    )
-    db.add(sl)
-
-# Write all ledger entries
-for le in ledger_entries:
-    db.add(le)
+    if qty > 0:
+        db.add(StockLevel(
+            product_id=product_id,
+            location_id=location_id,
+            quantity_on_hand=qty,
+            reserved_quantity=0,
+        ))
 
 db.commit()
-print(f"   {len(stock_balance)} stock_level records written, {len(ledger_entries)} ledger entries written.")
+print(f"   {len(stock_balance)} stock_level records written, {len(events)} ledger entries written.")
 
 
 # ------------------------------------------------------------------
@@ -609,22 +650,22 @@ out_stock   = db.query(Product).outerjoin(StockLevel).filter(
 ).count()
 
 print(f"""
-   ┌─────────────────────────────────────────┐
-   │         SEED VERIFICATION SUMMARY       │
-   ├─────────────────────────────────────────┤
-   │  Categories         : {cat_count:<5}               │
-   │  Products           : {prod_count:<5}               │
-   │  Stock Level Rows   : {sl_count:<5}               │
-   │  Total Stock on Hand: {total_stock:<5}               │
-   │  Low-stock Products : {low_stock:<5}               │
-   │  Out-of-stock Prods : {out_stock:<5}               │
-   ├─────────────────────────────────────────┤
-   │  Receipts           : {rec_count:<5}               │
-   │  Deliveries         : {del_count:<5}               │
-   │  Internal Transfers : {trf_count:<5}               │
-   │  Stock Adjustments  : {adj_count:<5}               │
-   │  Ledger Entries     : {led_count:<5}               │
-   └─────────────────────────────────────────┘
+   +-----------------------------------------+
+   |         SEED VERIFICATION SUMMARY       |
+   +-----------------------------------------+
+   |  Categories         : {cat_count:<5}               |
+   |  Products           : {prod_count:<5}               |
+   |  Stock Level Rows   : {sl_count:<5}               |
+   |  Total Stock on Hand: {total_stock:<5}               |
+   |  Low-stock Products : {low_stock:<5}               |
+   |  Out-of-stock Prods : {out_stock:<5}               |
+   +-----------------------------------------+
+   |  Receipts           : {rec_count:<5}               |
+   |  Deliveries         : {del_count:<5}               |
+   |  Internal Transfers : {trf_count:<5}               |
+   |  Stock Adjustments  : {adj_count:<5}               |
+   |  Ledger Entries     : {led_count:<5}               |
+   +-----------------------------------------+
 """)
 
 # Check for negative stock
@@ -640,3 +681,4 @@ print(f"   OK: {user_count} users preserved (not modified).")
 
 db.close()
 print("\n=== Seed complete. ===")
+

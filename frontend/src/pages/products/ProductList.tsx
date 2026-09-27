@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { api } from '../../services/api';
 import { Product, Category, Warehouse } from '../../types';
 import { Badge } from '../../components/common/Badge';
@@ -11,9 +11,11 @@ import { useAuth } from '../../context/AuthContext';
 
 interface ProductListProps {
   onNavigateTab?: (tab: NavTab) => void;
+  externalSearchTerm?: string;
+  onSearchChange?: (term: string) => void;
 }
 
-export const ProductList: React.FC<ProductListProps> = ({ onNavigateTab }) => {
+export const ProductList: React.FC<ProductListProps> = ({ onNavigateTab, externalSearchTerm, onSearchChange }) => {
   const { isManager } = useAuth();
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -21,9 +23,21 @@ export const ProductList: React.FC<ProductListProps> = ({ onNavigateTab }) => {
   const [loading, setLoading] = useState(true);
 
   // Search & Filter
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState(externalSearchTerm || '');
   const [selectedCategory, setSelectedCategory] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('');
+
+  // Keep search state synchronized with external search prop
+  useEffect(() => {
+    if (externalSearchTerm !== undefined) {
+      setSearchTerm(externalSearchTerm);
+    }
+  }, [externalSearchTerm]);
+
+  const handleSearchChange = (value: string) => {
+    setSearchTerm(value);
+    onSearchChange?.(value);
+  };
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -87,15 +101,30 @@ export const ProductList: React.FC<ProductListProps> = ({ onNavigateTab }) => {
     }
   };
 
-  // Filter products
-  const filteredProducts = products.filter(p => {
-    const matchesSearch =
-      p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      p.sku.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCat = !selectedCategory || p.category_name === selectedCategory;
-    const matchesStatus = !selectedStatus || p.stock_status === selectedStatus;
-    return matchesSearch && matchesCat && matchesStatus;
-  });
+  // Filter products: case-insensitive, whitespace-tolerant by product name and SKU
+  const filteredProducts = useMemo(() => {
+    const rawSearch = (searchTerm || '').trim().toLowerCase();
+    const normalizedSearch = rawSearch.replace(/\s+/g, ' ');
+    const searchTokens = normalizedSearch ? normalizedSearch.split(' ') : [];
+
+    return products.filter((p) => {
+      const name = (p.name || '').toLowerCase().replace(/\s+/g, ' ');
+      const sku = (p.sku || '').toLowerCase().replace(/\s+/g, ' ');
+
+      let matchesSearch = true;
+      if (normalizedSearch) {
+        matchesSearch =
+          name.includes(normalizedSearch) ||
+          sku.includes(normalizedSearch) ||
+          (searchTokens.length > 1 && searchTokens.every(tok => name.includes(tok) || sku.includes(tok)));
+      }
+
+      const matchesCat = !selectedCategory || p.category_name === selectedCategory;
+      const matchesStatus = !selectedStatus || p.stock_status === selectedStatus;
+
+      return matchesSearch && matchesCat && matchesStatus;
+    });
+  }, [products, searchTerm, selectedCategory, selectedStatus]);
 
   // Flattened locations for dropdown
   const allLocations = warehouses.flatMap(w =>
@@ -157,7 +186,7 @@ export const ProductList: React.FC<ProductListProps> = ({ onNavigateTab }) => {
             type="text"
             placeholder="Search by SKU code or product title..."
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={(e) => handleSearchChange(e.target.value)}
             className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-brand-500"
           />
         </div>
