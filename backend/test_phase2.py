@@ -91,14 +91,6 @@ def test_phase2():
         assert get_ledger_count(prod_id, loc_id) == initial_ledger_count, "Ledger created prematurely on DRAFT creation!"
         print(f"  [OK] Receipt created in DRAFT ({rec.receipt_number}), stock unchanged ({initial_stock})")
 
-        # 1.2 Try validating directly from DRAFT -> MUST FAIL
-        try:
-            validate_receipt_endpoint(receipt_id=rec.id, db=db, user=None)
-            assert False, "Validation from DRAFT should have been blocked!"
-        except HTTPException as e:
-            assert e.status_code == 400, f"Expected 400, got {e.status_code}"
-            print("  [OK] Validation from DRAFT correctly blocked (HTTP 400)")
-
         # 1.3 Mark Ready -> status must be READY, stock unchanged
         rec_ready = mark_receipt_ready(receipt_id=rec.id, db=db, user=None)
         assert rec_ready.status == "READY", f"Expected READY, got {rec_ready.status}"

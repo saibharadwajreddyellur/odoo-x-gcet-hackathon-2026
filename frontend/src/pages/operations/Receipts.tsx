@@ -4,6 +4,7 @@ import { Receipt, Product, Warehouse } from '../../types';
 import { useAuth } from '../../context/AuthContext';
 import { Badge } from '../../components/common/Badge';
 import { Modal } from '../../components/common/Modal';
+import { InfoBanner } from '../../components/common/InfoBanner';
 import { KanbanBoardContainer } from '../../components/common/KanbanBoardContainer';
 import { PrintDocumentModal } from '../../components/operations/PrintDocumentModal';
 import {
@@ -17,7 +18,7 @@ interface ReceiptsProps {
 }
 
 export const Receipts: React.FC<ReceiptsProps> = ({ initialProductToReceive }) => {
-  const { user } = useAuth();
+  const { user, isManager } = useAuth();
   const hasHandledInitialProduct = useRef(false);
   const [receipts, setReceipts] = useState<Receipt[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
@@ -95,6 +96,10 @@ export const Receipts: React.FC<ReceiptsProps> = ({ initialProductToReceive }) =
   };
 
   const handleOpenCreateReceipt = () => {
+    if (!isManager) {
+      setErrorMsg('Only Inventory Managers can create procurement receipts.');
+      return;
+    }
     setEditingReceipt(null);
     setSupplierName('');
     const now = new Date();
@@ -106,6 +111,10 @@ export const Receipts: React.FC<ReceiptsProps> = ({ initialProductToReceive }) =
   };
 
   const handleOpenEditReceipt = (rec: Receipt) => {
+    if (!isManager) {
+      setErrorMsg('Only Inventory Managers can edit procurement receipt details.');
+      return;
+    }
     if (rec.status !== 'DRAFT') {
       setErrorMsg('Only Draft receipts can be edited.');
       return;
@@ -189,6 +198,10 @@ export const Receipts: React.FC<ReceiptsProps> = ({ initialProductToReceive }) =
 
   /** Cancel: allowed from DRAFT or READY, no stock rollback needed */
   const handleCancelReceipt = async (id: number) => {
+    if (!isManager) {
+      setErrorMsg('Only Inventory Managers can cancel receipts.');
+      return;
+    }
     if (!window.confirm('Cancel this receipt? This cannot be undone.')) return;
     setProcessingId(id);
     setErrorMsg(null);
@@ -268,10 +281,7 @@ export const Receipts: React.FC<ReceiptsProps> = ({ initialProductToReceive }) =
                 <span className="font-mono text-base font-bold text-slate-900">{selectedReceipt.receipt_number}</span>
                 <Badge status={selectedReceipt.status} size="md" />
                 {late && (
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-200">
-                    <Clock className="w-3 h-3" />
-                    <span>LATE OPERATION</span>
-                  </span>
+                  <Badge status="LATE" size="md" />
                 )}
               </div>
               <p className="text-xs text-slate-500 mt-0.5">
@@ -295,13 +305,15 @@ export const Receipts: React.FC<ReceiptsProps> = ({ initialProductToReceive }) =
             {/* Action buttons matching status */}
             {selectedReceipt.status === 'DRAFT' && (
               <>
-                <button
-                  onClick={() => handleOpenEditReceipt(selectedReceipt)}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 font-medium rounded-md text-xs shadow-xs transition-colors cursor-pointer"
-                >
-                  <Pencil className="w-3.5 h-3.5" />
-                  <span>Edit Receipt</span>
-                </button>
+                {isManager && (
+                  <button
+                    onClick={() => handleOpenEditReceipt(selectedReceipt)}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 font-medium rounded-md text-xs shadow-xs transition-colors cursor-pointer"
+                  >
+                    <Pencil className="w-3.5 h-3.5" />
+                    <span>Edit Receipt</span>
+                  </button>
+                )}
                 <button
                   onClick={() => handleValidateReceipt(selectedReceipt.id)}
                   disabled={processingId === selectedReceipt.id}
@@ -310,14 +322,16 @@ export const Receipts: React.FC<ReceiptsProps> = ({ initialProductToReceive }) =
                   <CheckCircle2 className="w-3.5 h-3.5" />
                   <span>{processingId === selectedReceipt.id ? 'Updating Stock...' : 'Receive & Validate'}</span>
                 </button>
-                <button
-                  onClick={() => handleCancelReceipt(selectedReceipt.id)}
-                  disabled={processingId === selectedReceipt.id}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-md text-xs font-medium transition-colors cursor-pointer disabled:opacity-50"
-                >
-                  <XCircle className="w-3.5 h-3.5" />
-                  <span>Cancel Receipt</span>
-                </button>
+                {isManager && (
+                  <button
+                    onClick={() => handleCancelReceipt(selectedReceipt.id)}
+                    disabled={processingId === selectedReceipt.id}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-md text-xs font-medium transition-colors cursor-pointer disabled:opacity-50"
+                  >
+                    <XCircle className="w-3.5 h-3.5" />
+                    <span>Cancel Receipt</span>
+                  </button>
+                )}
               </>
             )}
 
@@ -331,14 +345,16 @@ export const Receipts: React.FC<ReceiptsProps> = ({ initialProductToReceive }) =
                   <CheckCircle2 className="w-3.5 h-3.5" />
                   <span>{processingId === selectedReceipt.id ? 'Updating Stock...' : 'Receive & Validate'}</span>
                 </button>
-                <button
-                  onClick={() => handleCancelReceipt(selectedReceipt.id)}
-                  disabled={processingId === selectedReceipt.id}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-md text-xs font-medium transition-colors cursor-pointer disabled:opacity-50"
-                >
-                  <XCircle className="w-3.5 h-3.5" />
-                  <span>Cancel Receipt</span>
-                </button>
+                {isManager && (
+                  <button
+                    onClick={() => handleCancelReceipt(selectedReceipt.id)}
+                    disabled={processingId === selectedReceipt.id}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-md text-xs font-medium transition-colors cursor-pointer disabled:opacity-50"
+                  >
+                    <XCircle className="w-3.5 h-3.5" />
+                    <span>Cancel Receipt</span>
+                  </button>
+                )}
               </>
             )}
 
@@ -473,21 +489,32 @@ export const Receipts: React.FC<ReceiptsProps> = ({ initialProductToReceive }) =
   // ==========================================
   return (
     <div className="space-y-6">
+      {/* RBAC Notice for non-managers */}
+      {!isManager && (
+        <InfoBanner
+          icon={Truck}
+          title="Warehouse Receiving Floor"
+          description="Warehouse Staff verify physical deliveries and receive goods into stock. Purchase order creation, pricing, and supplier contract details are managed by Inventory Managers."
+        />
+      )}
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-1">
         <div>
           <h1 className="text-xl font-semibold text-slate-900 tracking-tight">Inbound Receipts (Procurement)</h1>
           <p className="text-xs text-slate-500 mt-0.5">
-            Log shipments from suppliers. Workflow: <span className="font-medium text-slate-700">Draft → Received (Done)</span>.
+            Log shipments from suppliers.
           </p>
         </div>
-        <button
-          onClick={handleOpenCreateReceipt}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-brand-600 hover:bg-brand-700 text-white text-xs font-medium rounded-md shadow-xs transition-colors cursor-pointer"
-        >
-          <Plus className="w-3.5 h-3.5" />
-          <span>New Inbound Receipt</span>
-        </button>
+        {isManager && (
+          <button
+            onClick={handleOpenCreateReceipt}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-brand-600 hover:bg-brand-700 text-white text-xs font-medium rounded-md shadow-xs transition-colors cursor-pointer"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            <span>New Inbound Receipt</span>
+          </button>
+        )}
       </div>
 
       {/* Error banner */}
@@ -595,12 +622,7 @@ export const Receipts: React.FC<ReceiptsProps> = ({ initialProductToReceive }) =
                       <td className="py-3.5 px-3 text-slate-600">
                         <div className="flex items-center gap-1.5">
                           <span>{formatDate(rec.scheduled_date)}</span>
-                          {late && (
-                            <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-100 text-rose-700">
-                              <Clock className="w-2.5 h-2.5" />
-                              <span>LATE</span>
-                            </span>
-                          )}
+                          {late && <Badge status="LATE" />}
                         </div>
                       </td>
                       <td className="py-3.5 px-3 text-slate-600">
@@ -617,14 +639,16 @@ export const Receipts: React.FC<ReceiptsProps> = ({ initialProductToReceive }) =
                         <div className="flex items-center justify-center gap-1.5">
                           {rec.status === 'DRAFT' && (
                             <>
-                              <button
-                                onClick={() => handleOpenEditReceipt(rec)}
-                                className="px-2.5 py-1 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded text-[11px] font-medium transition-all inline-flex items-center gap-1 cursor-pointer"
-                                title="Edit Draft Receipt"
-                              >
-                                <Pencil className="w-3 h-3" />
-                                <span>Edit</span>
-                              </button>
+                              {isManager && (
+                                <button
+                                  onClick={() => handleOpenEditReceipt(rec)}
+                                  className="px-2.5 py-1 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded text-[11px] font-medium transition-all inline-flex items-center gap-1 cursor-pointer"
+                                  title="Edit Draft Receipt"
+                                >
+                                  <Pencil className="w-3 h-3" />
+                                  <span>Edit</span>
+                                </button>
+                              )}
                               <button
                                 onClick={() => handleValidateReceipt(rec.id)}
                                 disabled={processingId === rec.id}
@@ -692,7 +716,7 @@ export const Receipts: React.FC<ReceiptsProps> = ({ initialProductToReceive }) =
                       <span className="text-xs font-bold text-slate-800 uppercase tracking-wide">
                         {colLabels[colStatus]}
                       </span>
-                      <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-white text-slate-700 border border-slate-200 shadow-xs">
+                      <span className="px-1.5 py-0.5 rounded-[3px] text-[10px] font-semibold bg-slate-100 text-slate-700 border border-slate-200 leading-none">
                         {colReceipts.length}
                       </span>
                     </div>
@@ -728,12 +752,7 @@ export const Receipts: React.FC<ReceiptsProps> = ({ initialProductToReceive }) =
                                 >
                                   {rec.receipt_number}
                                 </button>
-                                {late && (
-                                  <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200 shrink-0">
-                                    <Clock className="w-2.5 h-2.5" />
-                                    <span>LATE</span>
-                                  </span>
-                                )}
+                                {late && <Badge status="LATE" />}
                               </div>
                               <div className="shrink-0">
                                 <Badge status={rec.status} />
@@ -788,13 +807,15 @@ export const Receipts: React.FC<ReceiptsProps> = ({ initialProductToReceive }) =
                               <div className="flex items-center gap-1.5">
                                 {rec.status === 'DRAFT' && (
                                   <>
-                                    <button
-                                      onClick={() => handleOpenEditReceipt(rec)}
-                                      className="px-2.5 py-1 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded text-[11px] font-medium transition-all inline-flex items-center gap-1 cursor-pointer shadow-xs"
-                                    >
-                                      <Pencil className="w-3 h-3" />
-                                      <span>Edit</span>
-                                    </button>
+                                    {isManager && (
+                                      <button
+                                        onClick={() => handleOpenEditReceipt(rec)}
+                                        className="px-2.5 py-1 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded text-[11px] font-medium transition-all inline-flex items-center gap-1 cursor-pointer shadow-xs"
+                                      >
+                                        <Pencil className="w-3 h-3" />
+                                        <span>Edit</span>
+                                      </button>
+                                    )}
                                     <button
                                       onClick={() => handleValidateReceipt(rec.id)}
                                       disabled={processingId === rec.id}

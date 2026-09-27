@@ -4,6 +4,7 @@ import { Warehouse, Location } from '../types';
 import { useAuth } from '../context/AuthContext';
 import { Modal } from '../components/common/Modal';
 import { InfoBanner } from '../components/common/InfoBanner';
+import { Badge } from '../components/common/Badge';
 import {
   Warehouse as WarehouseIcon,
   MapPin,
@@ -172,7 +173,6 @@ export const Warehouses: React.FC = () => {
           icon={ShieldAlert}
           title="Read-Only Access"
           description="Warehouse & location topology administration is reserved for Inventory Managers."
-          badgeText="STAFF VIEW"
         />
       )}
 
@@ -234,10 +234,7 @@ export const Warehouses: React.FC = () => {
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200">
-                    <CheckCircle className="w-3 h-3" />
-                    Active Hub
-                  </span>
+                  <Badge status="ACTIVE" label="Active Hub" />
                   {isManager && (
                     <button
                       onClick={() => handleOpenEditWarehouse(wh)}

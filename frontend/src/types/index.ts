@@ -11,6 +11,8 @@ export interface User {
   role: string;
   is_active: boolean;
   created_at: string;
+  avatar_b64?: string | null;
+  name_changed_at?: string | null;
 }
 
 export interface Category {

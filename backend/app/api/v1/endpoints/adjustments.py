@@ -1,7 +1,7 @@
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session, joinedload
-from app.api.deps import get_db, get_current_user
+from app.api.deps import get_db, get_current_user, require_warehouse_staff
 from app.models.adjustment import StockAdjustment
 from app.models.product import Product
 from app.models.warehouse import Location
@@ -44,7 +44,7 @@ def list_adjustments(db: Session = Depends(get_db)):
 def create_stock_adjustment(
     adj_in: AdjustmentCreate,
     db: Session = Depends(get_db),
-    user: Optional[User] = Depends(get_current_user)
+    user: Optional[User] = Depends(require_warehouse_staff)
 ):
     """
     Records a stock adjustment:

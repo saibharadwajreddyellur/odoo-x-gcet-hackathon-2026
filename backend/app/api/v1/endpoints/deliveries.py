@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session, joinedload
-from app.api.deps import get_db, get_current_user
+from app.api.deps import get_db, get_current_user, require_inventory_manager, require_warehouse_staff
 from app.models.delivery import Delivery, DeliveryItem
 from app.models.warehouse import Location, Warehouse
 from app.models.product import Product, StockLevel
@@ -71,7 +71,7 @@ def get_delivery(delivery_id: int, db: Session = Depends(get_db)):
 def create_delivery(
     delivery_in: DeliveryCreate,
     db: Session = Depends(get_db),
-    user: Optional[User] = Depends(get_current_user)
+    user: Optional[User] = Depends(require_inventory_manager)
 ):
     if not delivery_in.items:
         raise HTTPException(status_code=400, detail="Delivery order must contain at least one item")
@@ -118,7 +118,7 @@ def create_delivery(
 def check_and_advance_to_waiting_or_ready(
     delivery_id: int,
     db: Session = Depends(get_db),
-    user: Optional[User] = Depends(get_current_user)
+    user: Optional[User] = Depends(require_warehouse_staff)
 ):
     """
     Checks stock availability for all items and advances status:
@@ -162,7 +162,7 @@ def check_and_advance_to_waiting_or_ready(
 def mark_delivery_ready(
     delivery_id: int,
     db: Session = Depends(get_db),
-    user: Optional[User] = Depends(get_current_user)
+    user: Optional[User] = Depends(require_warehouse_staff)
 ):
     """
     Manually marks a WAITING delivery as READY after stock becomes available.
@@ -209,7 +209,7 @@ def mark_delivery_ready(
 def validate_delivery_endpoint(
     delivery_id: int,
     db: Session = Depends(get_db),
-    user: Optional[User] = Depends(get_current_user)
+    user: Optional[User] = Depends(require_warehouse_staff)
 ):
     """
     Validates a delivery: READY → DONE.
@@ -236,7 +236,7 @@ def validate_delivery_endpoint(
 def cancel_delivery(
     delivery_id: int,
     db: Session = Depends(get_db),
-    user: Optional[User] = Depends(get_current_user)
+    user: Optional[User] = Depends(require_inventory_manager)
 ):
     """
     Cancels a delivery. Only allowed when the delivery has NOT been validated (DONE).

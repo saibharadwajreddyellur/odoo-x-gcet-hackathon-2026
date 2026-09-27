@@ -4,6 +4,7 @@ import { Delivery, Product, Warehouse } from '../../types';
 import { useAuth } from '../../context/AuthContext';
 import { Badge } from '../../components/common/Badge';
 import { Modal } from '../../components/common/Modal';
+import { InfoBanner } from '../../components/common/InfoBanner';
 import { KanbanBoardContainer } from '../../components/common/KanbanBoardContainer';
 import { PrintDocumentModal } from '../../components/operations/PrintDocumentModal';
 import {
@@ -13,7 +14,7 @@ import {
 } from 'lucide-react';
 
 export const Deliveries: React.FC = () => {
-  const { user } = useAuth();
+  const { user, isManager } = useAuth();
   const [deliveries, setDeliveries] = useState<Delivery[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
@@ -78,6 +79,10 @@ export const Deliveries: React.FC = () => {
 
   const handleCreateDelivery = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!isManager) {
+      setErrorMsg('Only Inventory Managers can create delivery orders.');
+      return;
+    }
     setSubmitting(true);
     setErrorMsg(null);
     try {
@@ -154,6 +159,10 @@ export const Deliveries: React.FC = () => {
 
   /** Cancel: allowed from DRAFT, WAITING, or READY with confirmation */
   const handleCancelDelivery = async (id: number) => {
+    if (!isManager) {
+      setErrorMsg('Only Inventory Managers can cancel delivery orders.');
+      return;
+    }
     const target = deliveries.find(d => d.id === id);
     if (!target) return;
     if (target.status === 'DONE') {
@@ -245,18 +254,9 @@ export const Deliveries: React.FC = () => {
             <div>
               <div className="flex items-center gap-2.5">
                 <span className="font-mono text-base font-bold text-slate-900">{selectedDelivery.delivery_number}</span>
-                <Badge status={selectedDelivery.status} size="md" />
+                <Badge status={selectedDelivery.status} size="md" label={selectedDelivery.status === 'WAITING' ? 'Waiting for Stock' : undefined} />
                 {late && (
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-200">
-                    <Clock className="w-3 h-3" />
-                    <span>LATE OPERATION</span>
-                  </span>
-                )}
-                {selectedDelivery.status === 'WAITING' && (
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-semibold bg-amber-50 text-amber-800 border border-amber-200">
-                    <AlertCircle className="w-3 h-3 text-amber-600" />
-                    <span>WAITING FOR STOCK</span>
-                  </span>
+                  <Badge status="LATE" size="md" />
                 )}
               </div>
               <p className="text-xs text-slate-500 mt-0.5">
@@ -284,14 +284,16 @@ export const Deliveries: React.FC = () => {
             {/* Action buttons matching status */}
             {selectedDelivery.status === 'DRAFT' && (
               <>
-                <button
-                  onClick={() => handleCancelDelivery(selectedDelivery.id)}
-                  disabled={processingId === selectedDelivery.id}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-lg text-xs font-semibold transition-all disabled:opacity-60 shadow-xs"
-                >
-                  <XCircle className="w-4 h-4 text-rose-600" />
-                  <span>Cancel Delivery</span>
-                </button>
+                {isManager && (
+                  <button
+                    onClick={() => handleCancelDelivery(selectedDelivery.id)}
+                    disabled={processingId === selectedDelivery.id}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-lg text-xs font-semibold transition-all disabled:opacity-60 shadow-xs"
+                  >
+                    <XCircle className="w-4 h-4 text-rose-600" />
+                    <span>Cancel Delivery</span>
+                  </button>
+                )}
                 <button
                   onClick={() => handleCheckAvailability(selectedDelivery.id)}
                   disabled={processingId === selectedDelivery.id}
@@ -305,14 +307,16 @@ export const Deliveries: React.FC = () => {
 
             {selectedDelivery.status === 'WAITING' && (
               <>
-                <button
-                  onClick={() => handleCancelDelivery(selectedDelivery.id)}
-                  disabled={processingId === selectedDelivery.id}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-md text-xs font-medium transition-colors cursor-pointer disabled:opacity-50"
-                >
-                  <XCircle className="w-3.5 h-3.5 text-rose-600" />
-                  <span>Cancel Delivery</span>
-                </button>
+                {isManager && (
+                  <button
+                    onClick={() => handleCancelDelivery(selectedDelivery.id)}
+                    disabled={processingId === selectedDelivery.id}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-md text-xs font-medium transition-colors cursor-pointer disabled:opacity-50"
+                  >
+                    <XCircle className="w-3.5 h-3.5 text-rose-600" />
+                    <span>Cancel Delivery</span>
+                  </button>
+                )}
                 <button
                   onClick={() => handleMarkReady(selectedDelivery.id)}
                   disabled={processingId === selectedDelivery.id}
@@ -326,14 +330,16 @@ export const Deliveries: React.FC = () => {
 
             {selectedDelivery.status === 'READY' && (
               <>
-                <button
-                  onClick={() => handleCancelDelivery(selectedDelivery.id)}
-                  disabled={processingId === selectedDelivery.id}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-md text-xs font-medium transition-colors cursor-pointer disabled:opacity-50"
-                >
-                  <XCircle className="w-3.5 h-3.5 text-rose-600" />
-                  <span>Cancel Delivery</span>
-                </button>
+                {isManager && (
+                  <button
+                    onClick={() => handleCancelDelivery(selectedDelivery.id)}
+                    disabled={processingId === selectedDelivery.id}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-md text-xs font-medium transition-colors cursor-pointer disabled:opacity-50"
+                  >
+                    <XCircle className="w-3.5 h-3.5 text-rose-600" />
+                    <span>Cancel Delivery</span>
+                  </button>
+                )}
                 <button
                   onClick={() => handleValidateDelivery(selectedDelivery.id)}
                   disabled={processingId === selectedDelivery.id}
@@ -457,19 +463,15 @@ export const Deliveries: React.FC = () => {
                       <td className="py-2.5 px-4 text-slate-600">{item.location_name || 'Designated Warehouse Location'}</td>
                       <td className="py-2.5 px-4 text-right font-bold text-slate-900">-{item.quantity}</td>
                       <td className="py-2.5 px-4 text-center">
-                        {selectedDelivery.status === 'DONE' ? (
-                          <span className="px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                            Dispatched
-                          </span>
-                        ) : inStock ? (
-                          <span className="px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                            Available in Stock
-                          </span>
-                        ) : (
-                          <span className="px-2 py-0.5 rounded text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-200">
-                            Insufficient Stock
-                          </span>
-                        )}
+                        <div className="flex justify-center">
+                          {selectedDelivery.status === 'DONE' ? (
+                            <Badge status="DISPATCHED" />
+                          ) : inStock ? (
+                            <Badge status="IN_STOCK" label="Available" />
+                          ) : (
+                            <Badge status="LOW_STOCK" label="Insufficient" />
+                          )}
+                        </div>
                       </td>
                     </tr>
                   );
@@ -502,21 +504,32 @@ export const Deliveries: React.FC = () => {
   // ==========================================
   return (
     <div className="space-y-6">
+      {/* RBAC Notice for non-managers */}
+      {!isManager && (
+        <InfoBanner
+          icon={Send}
+          title="Warehouse Fulfillment Operations"
+          description="Warehouse Staff check stock, pick items, pack shipments, and validate dispatches. Delivery order generation and cancellation are managed by Inventory Managers."
+        />
+      )}
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-1">
         <div>
           <h1 className="text-xl font-semibold text-slate-900 tracking-tight">Outgoing Deliveries (Fulfillment)</h1>
           <p className="text-xs text-slate-500 mt-0.5">
-            Process outbound customer orders. Workflow: <span className="font-medium text-slate-700">Draft → Waiting (if short) → Ready → Done</span>.
+            Process outbound customer orders.
           </p>
         </div>
-        <button
-          onClick={() => setIsModalOpen(true)}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-medium rounded-md shadow-xs transition-colors"
-        >
-          <Plus className="w-3.5 h-3.5" />
-          <span>New Delivery Order</span>
-        </button>
+        {isManager && (
+          <button
+            onClick={() => setIsModalOpen(true)}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-medium rounded-md shadow-xs transition-colors"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            <span>New Delivery Order</span>
+          </button>
+        )}
       </div>
 
       {/* Error banner */}
@@ -627,12 +640,7 @@ export const Deliveries: React.FC = () => {
                       <td className="py-3.5 px-3 text-slate-600">
                         <div className="flex items-center gap-1.5">
                           <span>{formatDate(deliv.scheduled_date)}</span>
-                          {late && (
-                            <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-100 text-rose-700">
-                              <Clock className="w-2.5 h-2.5" />
-                              <span>LATE</span>
-                            </span>
-                          )}
+                          {late && <Badge status="LATE" />}
                         </div>
                       </td>
                       <td className="py-3.5 px-3 text-slate-600">
@@ -647,7 +655,7 @@ export const Deliveries: React.FC = () => {
                       </td>
                       <td className="py-3.5 px-4 text-center">
                         <div className="flex items-center justify-center gap-1.5">
-                          {deliv.status !== 'DONE' && deliv.status !== 'CANCELLED' && (
+                          {isManager && deliv.status !== 'DONE' && deliv.status !== 'CANCELLED' && (
                             <button
                               onClick={() => handleCancelDelivery(deliv.id)}
                               disabled={processingId === deliv.id}
@@ -734,7 +742,7 @@ export const Deliveries: React.FC = () => {
                       <span className="text-[11px] font-bold text-slate-800 uppercase tracking-wide">
                         {colLabels[colStatus]}
                       </span>
-                      <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-white text-slate-700 border border-slate-200 shadow-xs">
+                      <span className="px-1.5 py-0.5 rounded-[3px] text-[10px] font-semibold bg-slate-100 text-slate-700 border border-slate-200 leading-none">
                         {colDeliveries.length}
                       </span>
                     </div>
@@ -776,12 +784,7 @@ export const Deliveries: React.FC = () => {
                                   <Calendar className="w-3 h-3 text-slate-400" />
                                   <span>{formatDate(deliv.scheduled_date)}</span>
                                 </span>
-                                {late && (
-                                  <span className="inline-flex items-center gap-0.5 px-1 py-0.5 rounded text-[10px] font-bold bg-rose-100 text-rose-700">
-                                    <Clock className="w-2.5 h-2.5" />
-                                    <span>LATE</span>
-                                  </span>
-                                )}
+                                {late && <Badge status="LATE" />}
                               </div>
                               <div className="flex items-center justify-between text-slate-600">
                                 <span className="truncate max-w-[130px]" title={deliv.responsible_user_name || 'Staff'}>
@@ -801,7 +804,7 @@ export const Deliveries: React.FC = () => {
                               </button>
 
                               <div className="flex items-center gap-1.5">
-                                {deliv.status !== 'DONE' && deliv.status !== 'CANCELLED' && (
+                                {isManager && deliv.status !== 'DONE' && deliv.status !== 'CANCELLED' && (
                                   <button
                                     onClick={() => handleCancelDelivery(deliv.id)}
                                     disabled={processingId === deliv.id}

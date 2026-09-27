@@ -1,9 +1,10 @@
+import base64
 import hashlib
 import secrets
 from datetime import datetime, timedelta
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from app.api.deps import get_db, get_current_user
+from app.api.deps import get_db, get_current_user, require_user
 from app.core.config import settings
 from app.core.security import create_access_token, get_password_hash, verify_password
 from app.models.user import User
@@ -12,7 +13,8 @@ from app.schemas.auth import (
     UserCreate, UserLogin, UserOut, Token,
     PasswordResetRequest, PasswordResetResponse,
     OTPVerifyRequest, OTPVerifyResponse,
-    PasswordResetConfirm
+    PasswordResetConfirm,
+    ProfileUpdate, AvatarUpdate
 )
 from app.services.email_service import send_otp_email, SMTPConfigurationError, SMTPDeliveryError
 
@@ -346,3 +348,129 @@ def read_current_user(user: User = Depends(get_current_user)):
     if not user:
         raise HTTPException(status_code=401, detail="Authentication required")
     return user
+
+
+# ── Profile: display name update (30-day rate limit) ──────────────────────────
+
+NAME_CHANGE_COOLDOWN_DAYS = 30
+
+
+@router.patch("/me", response_model=UserOut)
+def update_profile(
+    body: ProfileUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_user),
+):
+    """
+    Update the authenticated user's display name.
+    Rate-limited: maximum one name change every 30 days.
+    Email, role, is_active are immutable through this endpoint.
+    """
+    name = body.full_name.strip()
+    if not name:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Display name cannot be empty."
+        )
+    if len(name) > 100:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Display name must be 100 characters or fewer."
+        )
+
+    now = datetime.utcnow()
+    if current_user.name_changed_at is not None:
+        elapsed = (now - current_user.name_changed_at).total_seconds()
+        cooldown_seconds = NAME_CHANGE_COOLDOWN_DAYS * 86400
+        if elapsed < cooldown_seconds:
+            remaining_seconds = int(cooldown_seconds - elapsed)
+            remaining_days = (remaining_seconds + 86399) // 86400  # ceil
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail=(
+                    f"You can change your name again in {remaining_days} "
+                    f"day{'s' if remaining_days != 1 else ''}. "
+                    f"(Cooldown: {NAME_CHANGE_COOLDOWN_DAYS} days between name changes.)"
+                )
+            )
+
+    current_user.full_name = name
+    current_user.name_changed_at = now
+    db.add(current_user)
+    db.commit()
+    db.refresh(current_user)
+    return current_user
+
+
+# ── Profile: avatar upload ─────────────────────────────────────────────────────
+
+# Allowed MIME prefixes for the data-URL
+_ALLOWED_AVATAR_PREFIXES = (
+    "data:image/png;base64,",
+    "data:image/jpeg;base64,",
+    "data:image/jpg;base64,",
+    "data:image/webp;base64,",
+    "data:image/gif;base64,",
+)
+_MAX_AVATAR_BYTES = 200 * 1024  # 200 KB decoded
+
+
+@router.post("/me/avatar", response_model=UserOut)
+def update_avatar(
+    body: AvatarUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_user),
+):
+    """
+    Upload / replace the authenticated user's profile picture.
+    Accepts a base64-encoded data-URL string.
+    Validates MIME type and enforces a 200 KB decoded size limit.
+    """
+    data_url = body.avatar_b64.strip()
+
+    # Validate prefix (type)
+    matched_prefix = None
+    for prefix in _ALLOWED_AVATAR_PREFIXES:
+        if data_url.startswith(prefix):
+            matched_prefix = prefix
+            break
+
+    if matched_prefix is None:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Avatar must be a valid PNG, JPEG, WEBP, or GIF image encoded as a base64 data-URL."
+        )
+
+    raw_b64 = data_url[len(matched_prefix):]
+    try:
+        decoded = base64.b64decode(raw_b64, validate=True)
+    except Exception:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Invalid base64 encoding in avatar data."
+        )
+
+    if len(decoded) > _MAX_AVATAR_BYTES:
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail=f"Avatar image must be smaller than 200 KB. Received {len(decoded) // 1024} KB."
+        )
+
+    current_user.avatar_b64 = data_url
+    db.add(current_user)
+    db.commit()
+    db.refresh(current_user)
+    return current_user
+
+
+@router.delete("/me/avatar", response_model=UserOut)
+def delete_avatar(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_user),
+):
+    """Remove the authenticated user's profile picture (revert to initial avatar)."""
+    current_user.avatar_b64 = None
+    db.add(current_user)
+    db.commit()
+    db.refresh(current_user)
+    return current_user

@@ -998,5 +998,39 @@ export const api = {
       if (res.ok) return await res.json();
     } catch { }
     return mockStore.ledger;
+  },
+
+  // --- Profile ---
+  async updateProfileName(fullName: string): Promise<User> {
+    const res = await apiFetch(`${API_BASE_URL}/auth/me`, {
+      method: 'PATCH',
+      body: JSON.stringify({ full_name: fullName }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Failed to update name' }));
+      throw Object.assign(new Error(err.detail || 'Failed to update name'), { status: res.status, detail: err.detail });
+    }
+    return res.json();
+  },
+
+  async updateAvatar(avatarB64: string): Promise<User> {
+    const res = await apiFetch(`${API_BASE_URL}/auth/me/avatar`, {
+      method: 'POST',
+      body: JSON.stringify({ avatar_b64: avatarB64 }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Failed to upload avatar' }));
+      throw Object.assign(new Error(err.detail || 'Failed to upload avatar'), { status: res.status, detail: err.detail });
+    }
+    return res.json();
+  },
+
+  async deleteAvatar(): Promise<User> {
+    const res = await apiFetch(`${API_BASE_URL}/auth/me/avatar`, { method: 'DELETE' });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Failed to remove avatar' }));
+      throw Object.assign(new Error(err.detail || 'Failed to remove avatar'), { status: res.status, detail: err.detail });
+    }
+    return res.json();
   }
 };

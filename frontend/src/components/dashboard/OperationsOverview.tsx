@@ -2,6 +2,7 @@ import React from 'react';
 import { Truck, Send, ArrowLeftRight, Clock, AlertCircle, ArrowUpRight } from 'lucide-react';
 import { OperationSummary } from '../../types';
 import { NavTab } from '../common/Sidebar';
+import { Badge } from '../common/Badge';
 
 interface OperationsOverviewProps {
   summaries: OperationSummary[];
@@ -73,14 +74,9 @@ export const OperationsOverview: React.FC<OperationsOverviewProps> = ({ summarie
 
           <div className="flex flex-wrap items-center gap-2 pt-2.5 border-t border-slate-100 text-xs">
             {receiptSummary.late_count > 0 ? (
-              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-rose-50 text-rose-700 font-medium text-[11px] border border-rose-200">
-                <Clock className="w-3 h-3" />
-                <span>{receiptSummary.late_count} Late</span>
-              </span>
+              <Badge status="LATE" label={`${receiptSummary.late_count} Late`} />
             ) : (
-              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-slate-50 text-slate-600 font-medium text-[11px] border border-slate-200">
-                <span>0 Late</span>
-              </span>
+              <span className="text-slate-400 text-xs">0 Late</span>
             )}
             <span className="text-slate-500 text-[11px] ml-auto">
               Total: <span className="text-slate-800 font-medium">{receiptSummary.total_count}</span>
@@ -118,20 +114,12 @@ export const OperationsOverview: React.FC<OperationsOverviewProps> = ({ summarie
 
           <div className="flex flex-wrap items-center gap-2 pt-2.5 border-t border-slate-100 text-xs">
             {deliverySummary.waiting_count > 0 && (
-              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-amber-50 text-amber-800 font-medium text-[11px] border border-amber-200">
-                <AlertCircle className="w-3 h-3 text-amber-600" />
-                <span>{deliverySummary.waiting_count} Waiting Stock</span>
-              </span>
+              <Badge status="WAITING" label={`${deliverySummary.waiting_count} Waiting`} />
             )}
             {deliverySummary.late_count > 0 ? (
-              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-rose-50 text-rose-700 font-medium text-[11px] border border-rose-200">
-                <Clock className="w-3 h-3" />
-                <span>{deliverySummary.late_count} Late</span>
-              </span>
+              <Badge status="LATE" label={`${deliverySummary.late_count} Late`} />
             ) : (
-              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-slate-50 text-slate-600 font-medium text-[11px] border border-slate-200">
-                <span>0 Late</span>
-              </span>
+              <span className="text-slate-400 text-xs">0 Late</span>
             )}
             <span className="text-slate-500 text-[11px] ml-auto">
               Total: <span className="text-slate-800 font-medium">{deliverySummary.total_count}</span>
@@ -169,14 +157,9 @@ export const OperationsOverview: React.FC<OperationsOverviewProps> = ({ summarie
 
           <div className="flex flex-wrap items-center gap-2 pt-2.5 border-t border-slate-100 text-xs">
             {transferSummary.late_count > 0 ? (
-              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-rose-50 text-rose-700 font-medium text-[11px] border border-rose-200">
-                <Clock className="w-3 h-3" />
-                <span>{transferSummary.late_count} Late</span>
-              </span>
+              <Badge status="LATE" label={`${transferSummary.late_count} Late`} />
             ) : (
-              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-slate-50 text-slate-600 font-medium text-[11px] border border-slate-200">
-                <span>0 Late</span>
-              </span>
+              <span className="text-slate-400 text-xs">0 Late</span>
             )}
             <span className="text-slate-500 text-[11px] ml-auto">
               Total: <span className="text-slate-800 font-medium">{transferSummary.total_count}</span>

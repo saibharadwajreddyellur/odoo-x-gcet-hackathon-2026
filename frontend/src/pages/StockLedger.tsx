@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { api } from '../services/api';
 import { StockLedgerEntry } from '../types';
 import { Badge } from '../components/common/Badge';
-import { Search, Filter, ShieldCheck } from 'lucide-react';
+import { Search, Filter } from 'lucide-react';
 
 export const StockLedger: React.FC = () => {
   const [entries, setEntries] = useState<StockLedgerEntry[]>([]);
@@ -41,13 +41,7 @@ export const StockLedger: React.FC = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-1">
         <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-xl font-semibold text-slate-900 tracking-tight">Stock Movement Ledger</h1>
-            <span className="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-              <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-              <span>Immutable Ledger</span>
-            </span>
-          </div>
+          <h1 className="text-xl font-semibold text-slate-900 tracking-tight">Stock Movement Ledger</h1>
           <p className="text-xs text-slate-500 mt-0.5">
             Audit-grade double-entry transaction history. Every receipt, delivery, transfer, and adjustment is recorded.
           </p>

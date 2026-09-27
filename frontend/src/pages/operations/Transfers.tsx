@@ -5,6 +5,8 @@ import { Badge } from '../../components/common/Badge';
 import { Modal } from '../../components/common/Modal';
 import { KanbanBoardContainer } from '../../components/common/KanbanBoardContainer';
 import { InfoBanner } from '../../components/common/InfoBanner';
+import { NavTab } from '../../components/common/Sidebar';
+import { useAuth } from '../../context/AuthContext';
 import {
   ArrowLeftRight, Plus, CheckCircle2, ShieldCheck, Trash2, Calendar,
   Search, LayoutList, Kanban, Eye, XCircle, ArrowRight, ChevronRight,
@@ -12,6 +14,7 @@ import {
 } from 'lucide-react';
 
 export const Transfers: React.FC = () => {
+  const { isManager } = useAuth();
   const [transfers, setTransfers] = useState<InternalTransfer[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
@@ -146,6 +149,10 @@ export const Transfers: React.FC = () => {
    * Completed transfers are strictly immutable
    */
   const handleCancelTransfer = async (id: number) => {
+    if (!isManager) {
+      setErrorMsg('Only Inventory Managers can cancel internal transfers.');
+      return;
+    }
     const target = transfers.find(t => t.id === id);
     if (!target) return;
     if (target.status === 'COMPLETED') {
@@ -214,7 +221,7 @@ export const Transfers: React.FC = () => {
         <div>
           <h2 className="text-xl font-bold text-slate-900 tracking-tight">Internal Stock Transfers</h2>
           <p className="text-xs text-slate-500 mt-0.5">
-            Relocate stock across bins, racks, and branch facilities. Workflow: <span className="font-semibold text-slate-700">Draft &rarr; Scheduled &rarr; Completed</span>.
+            Relocate stock across bins, racks, and branch facilities.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -342,15 +349,17 @@ export const Transfers: React.FC = () => {
                   {/* Workflow Action Buttons */}
                   {trf.status === 'DRAFT' && (
                     <>
-                      <button
-                        onClick={() => handleCancelTransfer(trf.id)}
-                        disabled={processingId === trf.id}
-                        className="inline-flex items-center gap-1 px-2.5 py-1.5 text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-md text-xs font-medium transition-colors cursor-pointer disabled:opacity-60"
-                        title="Cancel Transfer"
-                      >
-                        <XCircle className="w-3.5 h-3.5 text-rose-600" />
-                        <span>Cancel</span>
-                      </button>
+                      {isManager && (
+                        <button
+                          onClick={() => handleCancelTransfer(trf.id)}
+                          disabled={processingId === trf.id}
+                          className="inline-flex items-center gap-1 px-2.5 py-1.5 text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-md text-xs font-medium transition-colors cursor-pointer disabled:opacity-60"
+                          title="Cancel Transfer"
+                        >
+                          <XCircle className="w-3.5 h-3.5 text-rose-600" />
+                          <span>Cancel</span>
+                        </button>
+                      )}
                       <button
                         onClick={() => handleScheduleTransfer(trf.id)}
                         disabled={processingId === trf.id}
@@ -364,15 +373,17 @@ export const Transfers: React.FC = () => {
 
                   {trf.status === 'SCHEDULED' && (
                     <>
-                      <button
-                        onClick={() => handleCancelTransfer(trf.id)}
-                        disabled={processingId === trf.id}
-                        className="inline-flex items-center gap-1 px-2.5 py-1.5 text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-md text-xs font-medium transition-colors cursor-pointer disabled:opacity-60"
-                        title="Cancel Transfer"
-                      >
-                        <XCircle className="w-3.5 h-3.5 text-rose-600" />
-                        <span>Cancel</span>
-                      </button>
+                      {isManager && (
+                        <button
+                          onClick={() => handleCancelTransfer(trf.id)}
+                          disabled={processingId === trf.id}
+                          className="inline-flex items-center gap-1 px-2.5 py-1.5 text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-md text-xs font-medium transition-colors cursor-pointer disabled:opacity-60"
+                          title="Cancel Transfer"
+                        >
+                          <XCircle className="w-3.5 h-3.5 text-rose-600" />
+                          <span>Cancel</span>
+                        </button>
+                      )}
                       <button
                         onClick={() => handleCompleteTransfer(trf.id)}
                         disabled={processingId === trf.id}
@@ -385,15 +396,11 @@ export const Transfers: React.FC = () => {
                   )}
 
                   {trf.status === 'COMPLETED' && (
-                    <span className="text-[11px] text-emerald-700 font-medium bg-emerald-50 px-2 py-1 rounded border border-emerald-200">
-                      Completed & Audited
-                    </span>
+                    <Badge status="COMPLETED" label="Completed & Audited" />
                   )}
 
                   {trf.status === 'CANCELLED' && (
-                    <span className="text-[11px] text-rose-700 font-medium bg-rose-50 px-2 py-1 rounded border border-rose-200">
-                      Cancelled
-                    </span>
+                    <Badge status="CANCELLED" />
                   )}
 
                   {/* Details View Button */}
@@ -460,7 +467,7 @@ export const Transfers: React.FC = () => {
                       <span className="text-[11px] font-bold text-slate-800 uppercase tracking-wide">
                         {colLabels[colStatus]}
                       </span>
-                      <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-white text-slate-700 border border-slate-200 shadow-xs">
+                      <span className="px-1.5 py-0.5 rounded-[3px] text-[10px] font-semibold bg-slate-100 text-slate-700 border border-slate-200 leading-none">
                         {colTransfers.length}
                       </span>
                     </div>
@@ -514,14 +521,16 @@ export const Transfers: React.FC = () => {
                             <div className="flex items-center gap-1.5">
                               {trf.status === 'DRAFT' && (
                                 <>
-                                  <button
-                                    onClick={() => handleCancelTransfer(trf.id)}
-                                    disabled={processingId === trf.id}
-                                    className="p-1 text-rose-600 hover:bg-rose-50 rounded"
-                                    title="Cancel"
-                                  >
-                                    <XCircle className="w-3.5 h-3.5" />
-                                  </button>
+                                  {isManager && (
+                                    <button
+                                      onClick={() => handleCancelTransfer(trf.id)}
+                                      disabled={processingId === trf.id}
+                                      className="p-1 text-rose-600 hover:bg-rose-50 rounded"
+                                      title="Cancel"
+                                    >
+                                      <XCircle className="w-3.5 h-3.5" />
+                                    </button>
+                                  )}
                                   <button
                                     onClick={() => handleScheduleTransfer(trf.id)}
                                     disabled={processingId === trf.id}
@@ -534,14 +543,16 @@ export const Transfers: React.FC = () => {
 
                               {trf.status === 'SCHEDULED' && (
                                 <>
-                                  <button
-                                    onClick={() => handleCancelTransfer(trf.id)}
-                                    disabled={processingId === trf.id}
-                                    className="p-1 text-rose-600 hover:bg-rose-50 rounded"
-                                    title="Cancel"
-                                  >
-                                    <XCircle className="w-3.5 h-3.5" />
-                                  </button>
+                                  {isManager && (
+                                    <button
+                                      onClick={() => handleCancelTransfer(trf.id)}
+                                      disabled={processingId === trf.id}
+                                      className="p-1 text-rose-600 hover:bg-rose-50 rounded"
+                                      title="Cancel"
+                                    >
+                                      <XCircle className="w-3.5 h-3.5" />
+                                    </button>
+                                  )}
                                   <button
                                     onClick={() => handleCompleteTransfer(trf.id)}
                                     disabled={processingId === trf.id}
@@ -664,16 +675,18 @@ export const Transfers: React.FC = () => {
               <div className="flex items-center gap-2">
                 {selectedTransfer.status === 'DRAFT' && (
                   <>
-                    <button
-                      onClick={() => {
-                        handleCancelTransfer(selectedTransfer.id);
-                        setSelectedTransferId(null);
-                      }}
-                      disabled={processingId === selectedTransfer.id}
-                      className="px-3.5 py-1.5 text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-md text-xs font-medium transition-colors cursor-pointer disabled:opacity-60"
-                    >
-                      Cancel Transfer
-                    </button>
+                    {isManager && (
+                      <button
+                        onClick={() => {
+                          handleCancelTransfer(selectedTransfer.id);
+                          setSelectedTransferId(null);
+                        }}
+                        disabled={processingId === selectedTransfer.id}
+                        className="px-3.5 py-1.5 text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-md text-xs font-medium transition-colors cursor-pointer disabled:opacity-60"
+                      >
+                        Cancel Transfer
+                      </button>
+                    )}
                     <button
                       onClick={async () => {
                         await handleScheduleTransfer(selectedTransfer.id);
@@ -690,16 +703,18 @@ export const Transfers: React.FC = () => {
 
                 {selectedTransfer.status === 'SCHEDULED' && (
                   <>
-                    <button
-                      onClick={() => {
-                        handleCancelTransfer(selectedTransfer.id);
-                        setSelectedTransferId(null);
-                      }}
-                      disabled={processingId === selectedTransfer.id}
-                      className="px-3.5 py-1.5 text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-md text-xs font-medium transition-colors cursor-pointer disabled:opacity-60"
-                    >
-                      Cancel Transfer
-                    </button>
+                    {isManager && (
+                      <button
+                        onClick={() => {
+                          handleCancelTransfer(selectedTransfer.id);
+                          setSelectedTransferId(null);
+                        }}
+                        disabled={processingId === selectedTransfer.id}
+                        className="px-3.5 py-1.5 text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-md text-xs font-medium transition-colors cursor-pointer disabled:opacity-60"
+                      >
+                        Cancel Transfer
+                      </button>
+                    )}
                     <button
                       onClick={async () => {
                         await handleCompleteTransfer(selectedTransfer.id);
@@ -715,15 +730,11 @@ export const Transfers: React.FC = () => {
                 )}
 
                 {selectedTransfer.status === 'COMPLETED' && (
-                  <span className="text-xs text-emerald-700 font-medium bg-emerald-50 px-2.5 py-1 rounded border border-emerald-200">
-                    Transfer is completed & audited
-                  </span>
+                  <Badge status="COMPLETED" size="md" label="Completed & Audited" />
                 )}
 
                 {selectedTransfer.status === 'CANCELLED' && (
-                  <span className="text-xs text-rose-700 font-medium bg-rose-50 px-2.5 py-1 rounded border border-rose-200">
-                    Transfer is cancelled
-                  </span>
+                  <Badge status="CANCELLED" size="md" />
                 )}
               </div>
             </div>

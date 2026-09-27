@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Receipt, Delivery } from '../../types';
 import { Printer, Boxes, X, Calendar, User, Clock, CheckCircle2, FileText, MapPin } from 'lucide-react';
+import { Badge } from '../common/Badge';
 
 interface PrintDocumentModalProps {
   isOpen: boolean;
@@ -160,19 +161,7 @@ export const PrintDocumentModal: React.FC<PrintDocumentModalProps> = ({
             <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
               Status:
             </span>
-            <span
-              className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border ${
-                String(document.status).toUpperCase() === 'DONE'
-                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                  : String(document.status).toUpperCase() === 'READY'
-                  ? 'bg-sky-50 text-sky-700 border-sky-200'
-                  : String(document.status).toUpperCase() === 'CANCELLED'
-                  ? 'bg-rose-50 text-rose-700 border-rose-200'
-                  : 'bg-amber-50 text-amber-700 border-amber-200'
-              }`}
-            >
-              {document.status}
-            </span>
+            <Badge status={document.status} />
           </div>
         </div>
       </div>

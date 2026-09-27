@@ -1,26 +1,37 @@
-import urllib.request
 import json
 import sys
 import time
 
-BASE_URL = 'http://localhost:8000/api/v1'
+_test_client = None
+
+def get_test_client():
+    global _test_client
+    if _test_client is None:
+        from fastapi.testclient import TestClient
+        from main import app, init_db
+        init_db()
+        _test_client = TestClient(app)
+    return _test_client
 
 def api_call(path, data=None, method='GET', token=None):
-    url = f'{BASE_URL}{path}'
-    body = json.dumps(data).encode('utf-8') if data is not None else None
-    req = urllib.request.Request(url, data=body, method=method)
-    req.add_header('Content-Type', 'application/json')
+    client = get_test_client()
+    headers = {}
     if token:
-        req.add_header('Authorization', f'Bearer {token}')
+        headers['Authorization'] = f'Bearer {token}'
+    endpoint = f'/api/v1{path}'
+    if method == 'POST':
+        res = client.post(endpoint, json=data, headers=headers)
+    elif method == 'PUT':
+        res = client.put(endpoint, json=data, headers=headers)
+    elif method == 'DELETE':
+        res = client.delete(endpoint, headers=headers)
+    else:
+        res = client.get(endpoint, headers=headers)
     try:
-        with urllib.request.urlopen(req) as resp:
-            return resp.status, json.loads(resp.read().decode('utf-8'))
-    except urllib.error.HTTPError as e:
-        err_body = e.read().decode('utf-8')
-        try:
-            return e.code, json.loads(err_body)
-        except Exception:
-            return e.code, {'detail': err_body}
+        body_res = res.json()
+    except Exception:
+        body_res = {'detail': res.text}
+    return res.status_code, body_res
 
 
 def test_phase6_rbac():

@@ -18,17 +18,22 @@ def init_db():
     logger.info("Initializing database tables...")
     Base.metadata.create_all(bind=engine)
 
-    # Lightweight migration helper for newly added columns if table already existed
-    with engine.begin() as conn:
-        for tbl in ["receipts", "deliveries"]:
-            try:
-                conn.exec_driver_sql(f"ALTER TABLE {tbl} ADD COLUMN scheduled_date TIMESTAMP")
-            except Exception:
-                pass
-            try:
-                conn.exec_driver_sql(f"ALTER TABLE {tbl} ADD COLUMN responsible_user_id INTEGER")
-            except Exception:
-                pass
+    # Lightweight migration helper — each DDL runs in its own transaction so a
+    # "column already exists" error on PostgreSQL doesn't abort remaining migrations.
+    _migrations = [
+        "ALTER TABLE receipts ADD COLUMN scheduled_date TIMESTAMP",
+        "ALTER TABLE receipts ADD COLUMN responsible_user_id INTEGER",
+        "ALTER TABLE deliveries ADD COLUMN scheduled_date TIMESTAMP",
+        "ALTER TABLE deliveries ADD COLUMN responsible_user_id INTEGER",
+        "ALTER TABLE users ADD COLUMN avatar_b64 TEXT",
+        "ALTER TABLE users ADD COLUMN name_changed_at TIMESTAMP",
+    ]
+    for ddl in _migrations:
+        try:
+            with engine.begin() as conn:
+                conn.exec_driver_sql(ddl)
+        except Exception:
+            pass  # Column / table already exists — safe to ignore
 
     # Seed canonical enterprise data only on a completely fresh database (no users yet)
     db = SessionLocal()

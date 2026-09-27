@@ -11,6 +11,7 @@ interface AuthContextType {
   logout: () => void;
   demoLogin: () => void;
   demoLoginStaff: () => void;
+  updateUser: (partial: Partial<User>) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -114,6 +115,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     login('staff@stocksense.io', 'staff123');
   };
 
+  const updateUser = (partial: Partial<User>) => {
+    setUser(prev => {
+      if (!prev) return prev;
+      const updated = { ...prev, ...partial };
+      localStorage.setItem('stocksense_user', JSON.stringify(updated));
+      return updated;
+    });
+  };
+
   // Validate existing stored token on mount, if present
   useEffect(() => {
     const existingToken = localStorage.getItem('stocksense_token');
@@ -152,7 +162,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       signup,
       logout,
       demoLogin,
-      demoLoginStaff
+      demoLoginStaff,
+      updateUser
     }}>
       {children}
     </AuthContext.Provider>

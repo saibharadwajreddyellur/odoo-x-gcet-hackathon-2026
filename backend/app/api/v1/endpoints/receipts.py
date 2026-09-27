@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session, joinedload
-from app.api.deps import get_db, get_current_user
+from app.api.deps import get_db, get_current_user, require_inventory_manager, require_warehouse_staff
 from app.models.receipt import Receipt, ReceiptItem
 from app.models.warehouse import Location, Warehouse
 from app.models.user import User
@@ -70,7 +70,7 @@ def get_receipt(receipt_id: int, db: Session = Depends(get_db)):
 def create_receipt(
     receipt_in: ReceiptCreate,
     db: Session = Depends(get_db),
-    user: Optional[User] = Depends(get_current_user)
+    user: Optional[User] = Depends(require_inventory_manager)
 ):
     if not receipt_in.items:
         raise HTTPException(status_code=400, detail="Receipt must contain at least one product item")
@@ -118,7 +118,7 @@ def update_receipt(
     receipt_id: int,
     receipt_in: ReceiptUpdate,
     db: Session = Depends(get_db),
-    user: Optional[User] = Depends(get_current_user)
+    user: Optional[User] = Depends(require_inventory_manager)
 ):
     """
     Updates a DRAFT receipt.
@@ -172,7 +172,7 @@ def update_receipt(
 def mark_receipt_ready(
     receipt_id: int,
     db: Session = Depends(get_db),
-    user: Optional[User] = Depends(get_current_user)
+    user: Optional[User] = Depends(require_warehouse_staff)
 ):
     """
     Transitions DRAFT → READY.
@@ -202,7 +202,7 @@ def mark_receipt_ready(
 def validate_receipt_endpoint(
     receipt_id: int,
     db: Session = Depends(get_db),
-    user: Optional[User] = Depends(get_current_user)
+    user: Optional[User] = Depends(require_warehouse_staff)
 ):
     """
     Validates a receipt: DRAFT (or READY) → DONE.
@@ -227,7 +227,7 @@ def validate_receipt_endpoint(
 def cancel_receipt(
     receipt_id: int,
     db: Session = Depends(get_db),
-    user: Optional[User] = Depends(get_current_user)
+    user: Optional[User] = Depends(require_inventory_manager)
 ):
     """
     Cancels a receipt. Only allowed when status is DRAFT or READY (not DONE).

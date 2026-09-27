@@ -22,6 +22,8 @@ class UserOut(UserBase):
     id: int
     is_active: bool
     created_at: datetime
+    avatar_b64: Optional[str] = None
+    name_changed_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True
@@ -62,3 +64,15 @@ class PasswordResetConfirm(BaseModel):
     new_password: str
     otp: Optional[str] = None
     reset_token: Optional[str] = None
+
+
+# --- Profile update schemas ---
+
+class ProfileUpdate(BaseModel):
+    """Only full_name is mutable via this endpoint. email/role/is_active are read-only."""
+    full_name: str
+
+
+class AvatarUpdate(BaseModel):
+    """base64-encoded data-URL for the profile picture (e.g. 'data:image/png;base64,...')"""
+    avatar_b64: str

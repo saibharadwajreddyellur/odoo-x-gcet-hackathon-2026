@@ -70,8 +70,11 @@ export const Navbar: React.FC<NavbarProps> = ({ searchTerm, onSearchChange, onNa
             aria-expanded={showProfileMenu}
             aria-label="User profile and account settings"
           >
-            <div className="h-7 w-7 rounded-full bg-slate-800 text-white flex items-center justify-center font-medium text-xs">
-              {user?.full_name?.charAt(0) || user?.email?.charAt(0).toUpperCase() || 'U'}
+            <div className="h-7 w-7 rounded-full bg-slate-800 text-white flex items-center justify-center font-medium text-xs overflow-hidden shrink-0">
+              {user?.avatar_b64
+                ? <img src={user.avatar_b64} alt="Avatar" className="w-full h-full object-cover" />
+                : (user?.full_name?.charAt(0) || user?.email?.charAt(0).toUpperCase() || 'U')
+              }
             </div>
 
             <div className="hidden sm:block text-left">
@@ -79,8 +82,8 @@ export const Navbar: React.FC<NavbarProps> = ({ searchTerm, onSearchChange, onNa
                 {user?.full_name || 'Inventory User'}
               </p>
               <div className="flex items-center gap-1 mt-0.5">
-                <span className="text-[10px] text-slate-500 font-normal">
-                  {isManager ? 'Manager' : 'Staff'}
+                <span className="text-[10px] text-slate-500 font-medium">
+                  {isManager ? 'Inventory Manager' : 'Warehouse Staff'}
                 </span>
               </div>
             </div>
@@ -97,6 +100,11 @@ export const Navbar: React.FC<NavbarProps> = ({ searchTerm, onSearchChange, onNa
                 <p className="text-[11px] text-slate-500 truncate mt-0.5">
                   {user?.email}
                 </p>
+                <div className="mt-1.5">
+                  <span className="inline-block text-[10px] font-semibold text-slate-700 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
+                    {isManager ? 'Inventory Manager' : 'Warehouse Staff'}
+                  </span>
+                </div>
               </div>
 
               <div className="py-1">

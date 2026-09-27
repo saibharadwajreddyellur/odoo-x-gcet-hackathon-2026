@@ -125,20 +125,41 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigateTab, onQuickRece
 
         {/* Quick Operations Actions */}
         <div className="flex flex-wrap items-center gap-2">
-          <button
-            onClick={() => onNavigateTab('receipts')}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-brand-600 hover:bg-brand-700 text-white text-xs font-medium rounded-md shadow-xs transition-colors"
-          >
-            <Truck className="w-3.5 h-3.5" />
-            <span>New Receipt</span>
-          </button>
-          <button
-            onClick={() => onNavigateTab('deliveries')}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-medium rounded-md shadow-xs transition-colors"
-          >
-            <Send className="w-3.5 h-3.5" />
-            <span>Dispatch Order</span>
-          </button>
+          {isManager ? (
+            <>
+              <button
+                onClick={() => onNavigateTab('receipts')}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-brand-600 hover:bg-brand-700 text-white text-xs font-medium rounded-md shadow-xs transition-colors cursor-pointer"
+              >
+                <Truck className="w-3.5 h-3.5" />
+                <span>New Receipt</span>
+              </button>
+              <button
+                onClick={() => onNavigateTab('deliveries')}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-medium rounded-md shadow-xs transition-colors cursor-pointer"
+              >
+                <Send className="w-3.5 h-3.5" />
+                <span>New Delivery</span>
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                onClick={() => onNavigateTab('receipts')}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-brand-600 hover:bg-brand-700 text-white text-xs font-medium rounded-md shadow-xs transition-colors cursor-pointer"
+              >
+                <Truck className="w-3.5 h-3.5" />
+                <span>Receive Goods</span>
+              </button>
+              <button
+                onClick={() => onNavigateTab('deliveries')}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-medium rounded-md shadow-xs transition-colors cursor-pointer"
+              >
+                <Send className="w-3.5 h-3.5" />
+                <span>Fulfill Deliveries</span>
+              </button>
+            </>
+          )}
           <button
             onClick={() => onNavigateTab('transfers')}
             className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 text-xs font-medium rounded-md shadow-xs transition-colors"

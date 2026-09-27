@@ -2,7 +2,7 @@ import React from 'react';
 import { DashboardDocumentItem } from '../../types';
 import { NavTab } from '../common/Sidebar';
 import { Badge } from '../common/Badge';
-import { Clock, FileText, ArrowRight } from 'lucide-react';
+import { FileText, ArrowRight } from 'lucide-react';
 
 interface OperationsTableProps {
   documents: DashboardDocumentItem[];
@@ -32,20 +32,7 @@ export const OperationsTable: React.FC<OperationsTableProps> = ({
     }
   };
 
-  const getDocTypeBadge = (docType: string) => {
-    switch (docType.toLowerCase()) {
-      case 'receipt':
-        return <span className="px-2 py-0.5 rounded text-[11px] font-medium bg-blue-50 text-blue-700 border border-blue-200">Receipt</span>;
-      case 'delivery':
-        return <span className="px-2 py-0.5 rounded text-[11px] font-medium bg-indigo-50 text-indigo-700 border border-indigo-200">Delivery</span>;
-      case 'internal':
-        return <span className="px-2 py-0.5 rounded text-[11px] font-medium bg-purple-50 text-purple-700 border border-purple-200">Internal</span>;
-      case 'adjustment':
-        return <span className="px-2 py-0.5 rounded text-[11px] font-medium bg-amber-50 text-amber-700 border border-amber-200">Adjustment</span>;
-      default:
-        return <span className="px-2 py-0.5 rounded text-[11px] font-medium bg-slate-100 text-slate-700 border border-slate-200">{docType}</span>;
-    }
-  };
+
 
   const formatDate = (isoString?: string) => {
     if (!isoString) return '—';
@@ -69,10 +56,7 @@ export const OperationsTable: React.FC<OperationsTableProps> = ({
             <FileText className="w-4 h-4 text-slate-500" />
             <span>Document Pipeline ({documents.length})</span>
             {isLateFilterActive && (
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium bg-rose-50 text-rose-700 border border-rose-200">
-                <Clock className="w-3 h-3" />
-                <span>Overdue Only</span>
-              </span>
+              <Badge status="LATE" label="OVERDUE ONLY" />
             )}
           </h3>
           <p className="text-xs text-slate-500 mt-0.5">
@@ -123,7 +107,7 @@ export const OperationsTable: React.FC<OperationsTableProps> = ({
                       {doc.document_number}
                     </td>
                     <td className="py-2.5 px-3">
-                      {getDocTypeBadge(doc.document_type)}
+                      <Badge status={doc.document_type} variant="document_type" />
                     </td>
                     <td className="py-2.5 px-3 font-medium text-slate-800 max-w-[200px] truncate" title={doc.partner_or_reference}>
                       {doc.partner_or_reference || '—'}
@@ -140,12 +124,7 @@ export const OperationsTable: React.FC<OperationsTableProps> = ({
                     <td className="py-2.5 px-3">
                       <div className="flex items-center gap-1.5">
                         <span>{formatDate(doc.scheduled_date)}</span>
-                        {doc.is_late && (
-                          <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium bg-rose-50 text-rose-700 border border-rose-200">
-                            <Clock className="w-2.5 h-2.5" />
-                            <span>LATE</span>
-                          </span>
-                        )}
+                        {doc.is_late && <Badge status="LATE" />}
                       </div>
                     </td>
                     <td className="py-2.5 px-3 text-right font-medium">

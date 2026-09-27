@@ -2,6 +2,7 @@ import React from 'react';
 import { Product } from '../../types';
 import { Badge } from '../common/Badge';
 import { AlertCircle, Plus } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
 
 interface LowStockTableProps {
   items: Product[];
@@ -9,6 +10,7 @@ interface LowStockTableProps {
 }
 
 export const LowStockTable: React.FC<LowStockTableProps> = ({ items, onTriggerReceipt }) => {
+  const { isManager } = useAuth();
   return (
     <div className="bg-white rounded-lg border border-slate-200 shadow-[0_1px_2px_0_rgba(0,0,0,0.02)] overflow-hidden">
       <div className="p-4 border-b border-slate-200 flex items-center justify-between">
@@ -60,16 +62,22 @@ export const LowStockTable: React.FC<LowStockTableProps> = ({ items, onTriggerRe
                     +{prod.reorder_quantity} {prod.uom}
                   </td>
                   <td className="px-4 py-3 text-center">
-                    <Badge status={prod.stock_status} />
+                    <div className="flex justify-center">
+                      <Badge status={prod.stock_status} />
+                    </div>
                   </td>
                   <td className="px-4 py-3 text-right">
-                    <button
-                      onClick={() => onTriggerReceipt?.(prod)}
-                      className="inline-flex items-center gap-1 px-2.5 py-1 bg-brand-600 hover:bg-brand-700 text-white font-medium rounded text-xs transition-colors shadow-xs"
-                    >
-                      <Plus className="w-3 h-3" />
-                      <span>Create Receipt</span>
-                    </button>
+                    {isManager ? (
+                      <button
+                        onClick={() => onTriggerReceipt?.(prod)}
+                        className="inline-flex items-center gap-1 px-2.5 py-1 bg-brand-600 hover:bg-brand-700 text-white font-medium rounded text-xs transition-colors shadow-xs cursor-pointer"
+                      >
+                        <Plus className="w-3 h-3" />
+                        <span>Create Receipt</span>
+                      </button>
+                    ) : (
+                      <span className="text-[11px] text-slate-400 italic">Managed buffer</span>
+                    )}
                   </td>
                 </tr>
               ))

@@ -8,8 +8,14 @@ from app.models.ledger import StockLedger
 client = TestClient(app)
 
 def test_transfer_lifecycle():
+    # 0. Authenticate
+    login_res = client.post("/api/v1/auth/login", json={"email": "admin@stocksense.io", "password": "admin123"})
+    assert login_res.status_code == 200, f"Login failed: {login_res.text}"
+    token = login_res.json()["access_token"]
+    headers = {"Authorization": f"Bearer {token}"}
+
     # 1. Fetch existing transfers
-    res = client.get("/api/v1/transfers")
+    res = client.get("/api/v1/transfers", headers=headers)
     assert res.status_code == 200, f"Expected 200, got {res.status_code}: {res.text}"
     existing = res.json()
     print(f"Initial transfers count: {len(existing)}")
@@ -24,7 +30,7 @@ def test_transfer_lifecycle():
             {"product_id": 1, "quantity": 3}
         ]
     }
-    res = client.post("/api/v1/transfers", json=payload)
+    res = client.post("/api/v1/transfers", json=payload, headers=headers)
     assert res.status_code == 201, f"Expected 201, got {res.status_code}: {res.text}"
     trf = res.json()
     trf_id = trf["id"]
@@ -32,12 +38,12 @@ def test_transfer_lifecycle():
     print(f"Created transfer {trf['transfer_number']} with status: {trf['status']}")
 
     # 3. GET /transfers/{id}
-    res = client.get(f"/api/v1/transfers/{trf_id}")
+    res = client.get(f"/api/v1/transfers/{trf_id}", headers=headers)
     assert res.status_code == 200
     assert res.json()["status"] == "DRAFT"
 
     # 4. Schedule the transfer: POST /transfers/{id}/schedule
-    res = client.post(f"/api/v1/transfers/{trf_id}/schedule")
+    res = client.post(f"/api/v1/transfers/{trf_id}/schedule", headers=headers)
     assert res.status_code == 200, f"Expected 200, got {res.status_code}: {res.text}"
     scheduled_trf = res.json()
     assert scheduled_trf["status"] == "SCHEDULED", f"Expected SCHEDULED, got {scheduled_trf['status']}"
@@ -54,7 +60,7 @@ def test_transfer_lifecycle():
         db.close()
 
     # 6. Execute & Complete the transfer: POST /transfers/{id}/complete
-    res = client.post(f"/api/v1/transfers/{trf_id}/complete")
+    res = client.post(f"/api/v1/transfers/{trf_id}/complete", headers=headers)
     assert res.status_code == 200, f"Expected 200, got {res.status_code}: {res.text}"
     completed_trf = res.json()
     assert completed_trf["status"] == "COMPLETED", f"Expected COMPLETED, got {completed_trf['status']}"
@@ -80,13 +86,13 @@ def test_transfer_lifecycle():
         db.close()
 
     # 8. Immutability check: cannot schedule, complete, or cancel a COMPLETED transfer
-    res_sched = client.post(f"/api/v1/transfers/{trf_id}/schedule")
+    res_sched = client.post(f"/api/v1/transfers/{trf_id}/schedule", headers=headers)
     assert res_sched.status_code == 400, f"Expected 400 for scheduling completed transfer, got {res_sched.status_code}"
 
-    res_comp = client.post(f"/api/v1/transfers/{trf_id}/complete")
+    res_comp = client.post(f"/api/v1/transfers/{trf_id}/complete", headers=headers)
     assert res_comp.status_code == 400, f"Expected 400 for completing completed transfer, got {res_comp.status_code}"
 
-    res_cancel = client.post(f"/api/v1/transfers/{trf_id}/cancel")
+    res_cancel = client.post(f"/api/v1/transfers/{trf_id}/cancel", headers=headers)
     assert res_cancel.status_code == 400, f"Expected 400 for cancelling completed transfer, got {res_cancel.status_code}"
     print("Immutability confirmed: Completed transfer rejects schedule, complete, and cancel")
 
@@ -97,20 +103,20 @@ def test_transfer_lifecycle():
         "status": "DRAFT",
         "notes": "Testing transfer cancellation",
         "items": [{"product_id": 1, "quantity": 1}]
-    })
+    }, headers=headers)
     assert res2.status_code == 201
     cancel_trf = res2.json()
     cancel_id = cancel_trf["id"]
 
-    res_cancel2 = client.post(f"/api/v1/transfers/{cancel_id}/cancel")
+    res_cancel2 = client.post(f"/api/v1/transfers/{cancel_id}/cancel", headers=headers)
     assert res_cancel2.status_code == 200
     assert res_cancel2.json()["status"] == "CANCELLED"
     print(f"Cancelled transfer {cancel_id}: status is now CANCELLED")
 
     # Cancelled transfer rejects schedule and complete
-    res_sched2 = client.post(f"/api/v1/transfers/{cancel_id}/schedule")
+    res_sched2 = client.post(f"/api/v1/transfers/{cancel_id}/schedule", headers=headers)
     assert res_sched2.status_code == 400
-    res_comp2 = client.post(f"/api/v1/transfers/{cancel_id}/complete")
+    res_comp2 = client.post(f"/api/v1/transfers/{cancel_id}/complete", headers=headers)
     assert res_comp2.status_code == 400
     print("Cancelled transfer terminal state confirmed: rejects schedule and complete")
 

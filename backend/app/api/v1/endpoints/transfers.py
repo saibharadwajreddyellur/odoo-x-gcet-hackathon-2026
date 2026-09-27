@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session, joinedload
-from app.api.deps import get_db, get_current_user
+from app.api.deps import get_db, get_current_user, require_inventory_manager, require_warehouse_staff
 from app.models.transfer import InternalTransfer, TransferItem
 from app.models.user import User
 from app.schemas.movement import TransferCreate, TransferOut, TransferItemOut
@@ -66,7 +66,7 @@ def get_transfer(transfer_id: int, db: Session = Depends(get_db)):
 def create_transfer(
     trf_in: TransferCreate,
     db: Session = Depends(get_db),
-    user: Optional[User] = Depends(get_current_user)
+    user: Optional[User] = Depends(require_warehouse_staff)
 ):
     if trf_in.source_location_id == trf_in.dest_location_id:
         raise HTTPException(status_code=400, detail="Source and destination locations cannot be the same")
@@ -108,7 +108,7 @@ def create_transfer(
 def schedule_transfer_endpoint(
     transfer_id: int,
     db: Session = Depends(get_db),
-    user: Optional[User] = Depends(get_current_user)
+    user: Optional[User] = Depends(require_warehouse_staff)
 ):
     """
     Transitions a transfer from DRAFT to SCHEDULED status.
@@ -137,7 +137,7 @@ def schedule_transfer_endpoint(
 def cancel_transfer_endpoint(
     transfer_id: int,
     db: Session = Depends(get_db),
-    user: Optional[User] = Depends(get_current_user)
+    user: Optional[User] = Depends(require_inventory_manager)
 ):
     """
     Cancels a DRAFT or SCHEDULED transfer.
@@ -165,7 +165,7 @@ def cancel_transfer_endpoint(
 def complete_transfer_endpoint(
     transfer_id: int,
     db: Session = Depends(get_db),
-    user: Optional[User] = Depends(get_current_user)
+    user: Optional[User] = Depends(require_warehouse_staff)
 ):
     """
     Executes transfer completion:

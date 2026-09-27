@@ -140,7 +140,6 @@ export const ProductList: React.FC<ProductListProps> = ({ onNavigateTab, externa
           icon={ShieldAlert}
           title="Operational Catalog View"
           description="SKU registration, pricing, and reorder rule configurations are managed by Inventory Managers."
-          badgeText="STAFF VIEW"
         />
       )}
 
@@ -276,7 +275,9 @@ export const ProductList: React.FC<ProductListProps> = ({ onNavigateTab, externa
                       <div className="text-[11px] text-brand-700 font-medium">Reorder +{p.reorder_quantity}</div>
                     </td>
                     <td className="px-4 py-2.5 text-center">
-                      <Badge status={p.stock_status} />
+                      <div className="flex justify-center">
+                        <Badge status={p.stock_status} />
+                      </div>
                     </td>
                   </tr>
                 ))
