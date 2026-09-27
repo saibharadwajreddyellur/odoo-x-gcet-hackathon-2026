@@ -380,6 +380,46 @@ export const api = {
     return newReceipt;
   },
 
+  async updateReceipt(receiptId: number, receiptData: any): Promise<Receipt> {
+    try {
+      const res = await apiFetch(`${API_BASE_URL}/receipts/${receiptId}`, {
+        method: 'PUT',
+        body: JSON.stringify(receiptData)
+      });
+      if (res.ok) return await res.json();
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.detail || 'Failed to update receipt');
+      }
+    } catch (e: any) {
+      if (e && !isNetworkOrTimeoutError(e)) throw e;
+    }
+
+    const receipt = mockStore.receipts.find(r => r.id === receiptId);
+    if (!receipt) throw new Error('Receipt not found');
+    if (receipt.status !== 'DRAFT') throw new Error('Only DRAFT receipts can be edited');
+
+    receipt.supplier_name = receiptData.supplier_name ?? receipt.supplier_name;
+    receipt.scheduled_date = receiptData.scheduled_date ?? receipt.scheduled_date;
+    receipt.notes = receiptData.notes ?? receipt.notes;
+    if (receiptData.items) {
+      receipt.items = receiptData.items.map((item: any, idx: number) => {
+        const prod = mockStore.products.find(p => p.id === Number(item.product_id));
+        return {
+          id: idx + 1,
+          product_id: Number(item.product_id),
+          product_name: prod?.name || '',
+          product_sku: prod?.sku || '',
+          location_id: Number(item.location_id),
+          location_name: 'Designated Location',
+          quantity: Number(item.quantity),
+          unit_cost: Number(item.unit_cost) || 0
+        };
+      });
+    }
+    return receipt;
+  },
+
   async validateReceipt(receiptId: number): Promise<Receipt> {
     try {
       const res = await apiFetch(`${API_BASE_URL}/receipts/${receiptId}/validate`, {
@@ -394,10 +434,10 @@ export const api = {
       if (e && !isNetworkOrTimeoutError(e)) throw e;
     }
 
-    // Mock fallback: only validate if READY
+    // Mock fallback: validate DRAFT or READY
     const receipt = mockStore.receipts.find(r => r.id === receiptId);
     if (!receipt) throw new Error('Receipt not found');
-    if (receipt.status !== 'READY') throw new Error(`Receipt must be READY to validate. Current: ${receipt.status}`);
+    if (receipt.status !== 'READY' && receipt.status !== 'DRAFT') throw new Error(`Only DRAFT receipts can be validated. Current: ${receipt.status}`);
     receipt.status = 'DONE';
     receipt.validated_at = new Date().toISOString();
 

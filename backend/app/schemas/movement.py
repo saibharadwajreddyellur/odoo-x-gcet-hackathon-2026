@@ -31,6 +31,15 @@ class ReceiptCreate(BaseModel):
     items: List[ReceiptItemCreate]
 
 
+class ReceiptUpdate(BaseModel):
+    supplier_name: Optional[str] = None
+    receipt_date: Optional[datetime] = None
+    scheduled_date: Optional[datetime] = None
+    responsible_user_id: Optional[int] = None
+    notes: Optional[str] = None
+    items: Optional[List[ReceiptItemCreate]] = None
+
+
 class ReceiptOut(BaseModel):
     id: int
     receipt_number: str

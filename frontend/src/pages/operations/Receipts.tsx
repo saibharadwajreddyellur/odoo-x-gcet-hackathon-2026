@@ -9,7 +9,7 @@ import { PrintDocumentModal } from '../../components/operations/PrintDocumentMod
 import {
   Truck, Plus, CheckCircle2, Calendar, FileText, Trash2, XCircle,
   PackageCheck, Search, LayoutList, Kanban, ArrowLeft, Printer,
-  Clock, User as UserIcon, Building2, ChevronRight, Eye
+  Clock, User as UserIcon, Building2, ChevronRight, Eye, Pencil
 } from 'lucide-react';
 
 interface ReceiptsProps {
@@ -36,8 +36,9 @@ export const Receipts: React.FC<ReceiptsProps> = ({ initialProductToReceive }) =
   // Print Modal
   const [printReceipt, setPrintReceipt] = useState<Receipt | null>(null);
 
-  // New Receipt Modal State
+  // Receipt Modal State (Create & Edit)
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingReceipt, setEditingReceipt] = useState<Receipt | null>(null);
   const [supplierName, setSupplierName] = useState('');
   const [scheduledDate, setScheduledDate] = useState(() => {
     const now = new Date();
@@ -65,6 +66,7 @@ export const Receipts: React.FC<ReceiptsProps> = ({ initialProductToReceive }) =
       // If opened with preselected product from low stock table (only once)
       if (initialProductToReceive && !hasHandledInitialProduct.current) {
         hasHandledInitialProduct.current = true;
+        setEditingReceipt(null);
         setIsModalOpen(true);
         setItems([{
           product_id: String(initialProductToReceive.id),
@@ -92,12 +94,55 @@ export const Receipts: React.FC<ReceiptsProps> = ({ initialProductToReceive }) =
     }
   };
 
-  const handleCreateReceipt = async (e: React.FormEvent) => {
+  const handleOpenCreateReceipt = () => {
+    setEditingReceipt(null);
+    setSupplierName('');
+    const now = new Date();
+    now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+    setScheduledDate(now.toISOString().slice(0, 16));
+    setNotes('');
+    setItems([{ product_id: '', location_id: '', quantity: '50', unit_cost: '0' }]);
+    setIsModalOpen(true);
+  };
+
+  const handleOpenEditReceipt = (rec: Receipt) => {
+    if (rec.status !== 'DRAFT') {
+      setErrorMsg('Only Draft receipts can be edited.');
+      return;
+    }
+    setEditingReceipt(rec);
+    setSupplierName(rec.supplier_name);
+    if (rec.scheduled_date) {
+      try {
+        const d = new Date(rec.scheduled_date);
+        d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+        setScheduledDate(d.toISOString().slice(0, 16));
+      } catch {
+        setScheduledDate('');
+      }
+    } else {
+      setScheduledDate('');
+    }
+    setNotes(rec.notes || '');
+    if (rec.items && rec.items.length > 0) {
+      setItems(rec.items.map(it => ({
+        product_id: String(it.product_id),
+        location_id: String(it.location_id),
+        quantity: String(it.quantity),
+        unit_cost: String(it.unit_cost || 0)
+      })));
+    } else {
+      setItems([{ product_id: '', location_id: '', quantity: '50', unit_cost: '0' }]);
+    }
+    setIsModalOpen(true);
+  };
+
+  const handleSaveReceipt = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
     setErrorMsg(null);
     try {
-      await api.createReceipt({
+      const payload = {
         supplier_name: supplierName,
         scheduled_date: scheduledDate ? new Date(scheduledDate).toISOString() : new Date().toISOString(),
         responsible_user_id: user?.id,
@@ -108,30 +153,23 @@ export const Receipts: React.FC<ReceiptsProps> = ({ initialProductToReceive }) =
           quantity: Number(i.quantity),
           unit_cost: Number(i.unit_cost)
         }))
-      });
+      };
+
+      if (editingReceipt) {
+        await api.updateReceipt(editingReceipt.id, payload);
+      } else {
+        await api.createReceipt(payload);
+      }
       setIsModalOpen(false);
+      setEditingReceipt(null);
       setSupplierName('');
       setNotes('');
       setItems([{ product_id: '', location_id: '', quantity: '50', unit_cost: '0' }]);
-      loadData();
-    } catch (err: any) {
-      setErrorMsg(err.message || 'Failed to create receipt');
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  /** DRAFT → READY: stages goods for receiving, no stock change */
-  const handleMarkReady = async (id: number) => {
-    setProcessingId(id);
-    setErrorMsg(null);
-    try {
-      await api.markReceiptReady(id);
       await loadData();
     } catch (err: any) {
-      setErrorMsg(err.message || 'Failed to mark receipt as ready');
+      setErrorMsg(err.message || (editingReceipt ? 'Failed to update receipt' : 'Failed to create receipt'));
     } finally {
-      setProcessingId(null);
+      setSubmitting(false);
     }
   };
 
@@ -248,24 +286,29 @@ export const Receipts: React.FC<ReceiptsProps> = ({ initialProductToReceive }) =
           {/* Workflow Status Progression & Actions */}
           <div className="flex flex-wrap items-center gap-2.5">
             {/* Status progression indicator */}
-            <div className="hidden sm:flex items-center gap-1 px-2.5 py-1 bg-slate-50 border border-slate-200 rounded text-xs font-medium text-slate-600">
+            <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 bg-slate-50 border border-slate-200 rounded text-xs font-medium text-slate-600">
               <span className={selectedReceipt.status === 'DRAFT' ? 'font-bold text-slate-900' : 'text-slate-400'}>Draft</span>
               <ChevronRight className="w-3 h-3 text-slate-300" />
-              <span className={selectedReceipt.status === 'READY' ? 'font-bold text-blue-700' : selectedReceipt.status === 'DONE' ? 'text-slate-500' : 'text-slate-300'}>Ready</span>
-              <ChevronRight className="w-3 h-3 text-slate-300" />
-              <span className={selectedReceipt.status === 'DONE' ? 'font-bold text-emerald-700' : 'text-slate-300'}>Done</span>
+              <span className={selectedReceipt.status === 'DONE' ? 'font-bold text-emerald-700' : 'text-slate-300'}>Received (Done)</span>
             </div>
 
             {/* Action buttons matching status */}
             {selectedReceipt.status === 'DRAFT' && (
               <>
                 <button
-                  onClick={() => handleMarkReady(selectedReceipt.id)}
-                  disabled={processingId === selectedReceipt.id}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-md text-xs shadow-xs transition-colors cursor-pointer disabled:opacity-50"
+                  onClick={() => handleOpenEditReceipt(selectedReceipt)}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 font-medium rounded-md text-xs shadow-xs transition-colors cursor-pointer"
                 >
-                  <PackageCheck className="w-3.5 h-3.5" />
-                  <span>{processingId === selectedReceipt.id ? 'Processing...' : 'Mark Ready'}</span>
+                  <Pencil className="w-3.5 h-3.5" />
+                  <span>Edit Receipt</span>
+                </button>
+                <button
+                  onClick={() => handleValidateReceipt(selectedReceipt.id)}
+                  disabled={processingId === selectedReceipt.id}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-md text-xs shadow-xs transition-colors cursor-pointer disabled:opacity-50"
+                >
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                  <span>{processingId === selectedReceipt.id ? 'Updating Stock...' : 'Receive & Validate'}</span>
                 </button>
                 <button
                   onClick={() => handleCancelReceipt(selectedReceipt.id)}
@@ -283,10 +326,10 @@ export const Receipts: React.FC<ReceiptsProps> = ({ initialProductToReceive }) =
                 <button
                   onClick={() => handleValidateReceipt(selectedReceipt.id)}
                   disabled={processingId === selectedReceipt.id}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-brand-600 hover:bg-brand-700 text-white font-medium rounded-md text-xs shadow-xs transition-colors cursor-pointer disabled:opacity-50"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-md text-xs shadow-xs transition-colors cursor-pointer disabled:opacity-50"
                 >
                   <CheckCircle2 className="w-3.5 h-3.5" />
-                  <span>{processingId === selectedReceipt.id ? 'Updating Stock...' : 'Validate & Receive'}</span>
+                  <span>{processingId === selectedReceipt.id ? 'Updating Stock...' : 'Receive & Validate'}</span>
                 </button>
                 <button
                   onClick={() => handleCancelReceipt(selectedReceipt.id)}
@@ -435,12 +478,12 @@ export const Receipts: React.FC<ReceiptsProps> = ({ initialProductToReceive }) =
         <div>
           <h1 className="text-xl font-semibold text-slate-900 tracking-tight">Inbound Receipts (Procurement)</h1>
           <p className="text-xs text-slate-500 mt-0.5">
-            Log shipments from suppliers. Workflow: <span className="font-medium text-slate-700">Draft → Ready → Done</span>.
+            Log shipments from suppliers. Workflow: <span className="font-medium text-slate-700">Draft → Received (Done)</span>.
           </p>
         </div>
         <button
-          onClick={() => setIsModalOpen(true)}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-brand-600 hover:bg-brand-700 text-white text-xs font-medium rounded-md shadow-xs transition-colors"
+          onClick={handleOpenCreateReceipt}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-brand-600 hover:bg-brand-700 text-white text-xs font-medium rounded-md shadow-xs transition-colors cursor-pointer"
         >
           <Plus className="w-3.5 h-3.5" />
           <span>New Inbound Receipt</span>
@@ -573,27 +616,41 @@ export const Receipts: React.FC<ReceiptsProps> = ({ initialProductToReceive }) =
                       <td className="py-3.5 px-4 text-center">
                         <div className="flex items-center justify-center gap-1.5">
                           {rec.status === 'DRAFT' && (
-                            <button
-                              onClick={() => handleMarkReady(rec.id)}
-                              disabled={processingId === rec.id}
-                              className="px-2.5 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded text-[11px] font-semibold transition-all disabled:opacity-60"
-                            >
-                              Mark Ready
-                            </button>
+                            <>
+                              <button
+                                onClick={() => handleOpenEditReceipt(rec)}
+                                className="px-2.5 py-1 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded text-[11px] font-medium transition-all inline-flex items-center gap-1 cursor-pointer"
+                                title="Edit Draft Receipt"
+                              >
+                                <Pencil className="w-3 h-3" />
+                                <span>Edit</span>
+                              </button>
+                              <button
+                                onClick={() => handleValidateReceipt(rec.id)}
+                                disabled={processingId === rec.id}
+                                className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-[11px] font-semibold transition-all disabled:opacity-60 inline-flex items-center gap-1 cursor-pointer"
+                                title="Validate and receive goods into inventory"
+                              >
+                                <CheckCircle2 className="w-3 h-3" />
+                                <span>{processingId === rec.id ? 'Receiving...' : 'Receive'}</span>
+                              </button>
+                            </>
                           )}
                           {rec.status === 'READY' && (
                             <button
                               onClick={() => handleValidateReceipt(rec.id)}
                               disabled={processingId === rec.id}
-                              className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-[11px] font-semibold transition-all disabled:opacity-60"
+                              className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-[11px] font-semibold transition-all disabled:opacity-60 inline-flex items-center gap-1 cursor-pointer"
                             >
-                              Validate
+                              <CheckCircle2 className="w-3 h-3" />
+                              <span>{processingId === rec.id ? 'Receiving...' : 'Receive'}</span>
                             </button>
                           )}
                           {rec.status === 'DONE' && (
                             <button
                               onClick={() => setPrintReceipt(rec)}
-                              className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded text-[11px] font-medium transition-all inline-flex items-center gap-1"
+                              className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded text-[11px] font-medium transition-all inline-flex items-center gap-1 cursor-pointer"
+                              title="Print Goods Receipt"
                             >
                               <Printer className="w-3 h-3" />
                               <span>Print</span>
@@ -601,7 +658,7 @@ export const Receipts: React.FC<ReceiptsProps> = ({ initialProductToReceive }) =
                           )}
                           <button
                             onClick={() => setSelectedReceiptId(rec.id)}
-                            className="p-1 text-slate-400 hover:text-slate-700 rounded hover:bg-slate-100"
+                            className="p-1 text-slate-400 hover:text-slate-700 rounded hover:bg-slate-100 cursor-pointer"
                             title="View Details"
                           >
                             <Eye className="w-4 h-4" />
@@ -617,139 +674,177 @@ export const Receipts: React.FC<ReceiptsProps> = ({ initialProductToReceive }) =
         </div>
       ) : (
         /* KANBAN VIEW */
-        <KanbanBoardContainer>
-          <div className="flex gap-4 items-start min-w-max px-2 sm:px-4">
-            {(['DRAFT', 'READY', 'DONE', 'CANCELLED'] as const).map((colStatus) => {
+        <KanbanBoardContainer className="w-full">
+          <div className="grid grid-cols-3 gap-4 lg:gap-5 w-full min-w-[860px] items-start px-0.5 sm:px-1">
+            {(['DRAFT', 'DONE', 'CANCELLED'] as const).map((colStatus) => {
               const colReceipts = filteredReceipts.filter(r => r.status === colStatus);
               const colLabels = {
                 DRAFT: 'Draft',
-                READY: 'Ready to Receive',
                 DONE: 'Received (Done)',
                 CANCELLED: 'Canceled'
               };
+              const colUnits = colReceipts.reduce((sum, r) => sum + r.items.reduce((s, it) => s + it.quantity, 0), 0);
 
               return (
-                <div key={colStatus} className="w-[280px] min-w-[280px] shrink-0 bg-slate-50/80 rounded-xl border border-slate-200 p-3.5 flex flex-col space-y-3">
-                <div className="flex items-center justify-between border-b border-slate-200/80 pb-2.5">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-bold text-slate-800 uppercase tracking-wide">
-                      {colLabels[colStatus]}
-                    </span>
-                    <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-white text-slate-700 border border-slate-200 shadow-xs">
-                      {colReceipts.length}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="space-y-3 overflow-y-auto max-h-[700px] pr-1">
-                  {colReceipts.length === 0 ? (
-                    <div className="p-4 text-center text-[11px] text-slate-400 italic">
-                      No {colLabels[colStatus].toLowerCase()} receipts
+                <div key={colStatus} className="w-full bg-slate-50/80 rounded-xl border border-slate-200 p-3.5 sm:p-4 flex flex-col space-y-3.5">
+                  <div className="flex items-center justify-between border-b border-slate-200/80 pb-2.5">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-bold text-slate-800 uppercase tracking-wide">
+                        {colLabels[colStatus]}
+                      </span>
+                      <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-white text-slate-700 border border-slate-200 shadow-xs">
+                        {colReceipts.length}
+                      </span>
                     </div>
-                  ) : (
-                    colReceipts.map((rec) => {
-                      const late = isLate(rec);
-                      const totalUnits = rec.items.reduce((s, it) => s + it.quantity, 0);
+                    {colReceipts.length > 0 && (
+                      <span className="text-[11px] text-slate-400 font-medium">
+                        {colUnits} {colUnits === 1 ? 'unit' : 'units'}
+                      </span>
+                    )}
+                  </div>
 
-                      return (
-                        <div
-                          key={rec.id}
-                          className="bg-white rounded-xl border border-slate-200/90 p-4 shadow-xs hover:shadow-sm transition-shadow space-y-3"
-                        >
-                          <div className="flex items-start justify-between gap-1">
-                            <button
-                              onClick={() => setSelectedReceiptId(rec.id)}
-                              className="font-mono text-xs font-bold text-slate-900 hover:text-brand-600 hover:underline text-left"
-                            >
-                              {rec.receipt_number}
-                            </button>
-                            <Badge status={rec.status} />
-                          </div>
+                  <div className="space-y-3 overflow-y-auto max-h-[calc(100vh-280px)] min-h-[140px] pr-0.5">
+                    {colReceipts.length === 0 ? (
+                      <div className="py-8 px-4 text-center text-xs text-slate-400 italic bg-white/60 rounded-lg border border-dashed border-slate-200">
+                        No {colLabels[colStatus].toLowerCase()} receipts
+                      </div>
+                    ) : (
+                      colReceipts.map((rec) => {
+                        const late = isLate(rec);
+                        const totalUnits = rec.items.reduce((s, it) => s + it.quantity, 0);
 
-                          <div>
-                            <span className="text-[10px] text-slate-400 uppercase font-semibold block">Supplier</span>
-                            <span className="text-xs font-bold text-slate-800 line-clamp-1">{rec.supplier_name}</span>
-                          </div>
+                        return (
+                          <div
+                            key={rec.id}
+                            className="bg-white rounded-xl border border-slate-200/90 p-3.5 sm:p-4 shadow-xs hover:shadow-sm transition-all space-y-3"
+                          >
+                            {/* Top row: Reference + Late Tag + Status Badge */}
+                            <div className="flex items-center justify-between gap-2">
+                              <div className="flex items-center gap-2 min-w-0">
+                                <button
+                                  onClick={() => setSelectedReceiptId(rec.id)}
+                                  className="font-mono text-xs font-bold text-slate-900 hover:text-brand-600 hover:underline text-left truncate cursor-pointer"
+                                  title={rec.receipt_number}
+                                >
+                                  {rec.receipt_number}
+                                </button>
+                                {late && (
+                                  <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200 shrink-0">
+                                    <Clock className="w-2.5 h-2.5" />
+                                    <span>LATE</span>
+                                  </span>
+                                )}
+                              </div>
+                              <div className="shrink-0">
+                                <Badge status={rec.status} />
+                              </div>
+                            </div>
 
-                          <div className="text-[11px] text-slate-500 space-y-1 pt-1 border-t border-slate-100">
-                            <div className="flex items-center justify-between">
-                              <span className="flex items-center gap-1">
-                                <Calendar className="w-3 h-3 text-slate-400" />
-                                <span>{formatDate(rec.scheduled_date)}</span>
-                              </span>
-                              {late && (
-                                <span className="inline-flex items-center gap-0.5 px-1 py-0.5 rounded text-[10px] font-bold bg-rose-100 text-rose-700">
-                                  <Clock className="w-2.5 h-2.5" />
-                                  <span>LATE</span>
+                            {/* Supplier & Optional Notes/Ref */}
+                            <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-1">
+                              <div className="min-w-0 flex-1">
+                                <span className="text-[10px] text-slate-400 uppercase font-semibold block tracking-wider">Supplier</span>
+                                <span className="text-xs font-bold text-slate-800 truncate block" title={rec.supplier_name}>
+                                  {rec.supplier_name}
                                 </span>
+                              </div>
+                              {rec.notes && (
+                                <div className="text-[11px] text-slate-500 truncate max-w-[200px] italic" title={rec.notes}>
+                                  {rec.notes}
+                                </div>
                               )}
                             </div>
-                            <div className="flex items-center justify-between text-slate-600">
-                              <span>Resp: {rec.responsible_user_name || 'Staff'}</span>
-                              <strong className="text-slate-900">{totalUnits} units</strong>
+
+                            {/* Details Row: Scheduled Date, Responsible User, Units Count */}
+                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 pt-2.5 border-t border-slate-100 text-[11px] text-slate-600">
+                              <div className="flex items-center gap-1.5 min-w-0">
+                                <Calendar className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                                <span className="truncate" title={`Scheduled: ${formatDate(rec.scheduled_date)}`}>
+                                  {formatDate(rec.scheduled_date)}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-1.5 min-w-0">
+                                <UserIcon className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                                <span className="truncate" title={`Responsible: ${rec.responsible_user_name || 'Staff'}`}>
+                                  {rec.responsible_user_name || 'Staff'}
+                                </span>
+                              </div>
+                              <div className="flex items-center justify-start sm:justify-end gap-1 col-span-2 sm:col-span-1">
+                                <span className="font-semibold text-slate-900">{totalUnits} units</span>
+                                <span className="text-[10px] text-slate-400">({rec.items.length} {rec.items.length === 1 ? 'sku' : 'skus'})</span>
+                              </div>
+                            </div>
+
+                            {/* Card Actions Row */}
+                            <div className="pt-2.5 border-t border-slate-100 flex items-center justify-between gap-2">
+                              <button
+                                onClick={() => setSelectedReceiptId(rec.id)}
+                                className="text-[11px] font-semibold text-slate-600 hover:text-slate-900 inline-flex items-center gap-1 cursor-pointer"
+                              >
+                                <Eye className="w-3 h-3" />
+                                <span>Details</span>
+                              </button>
+
+                              <div className="flex items-center gap-1.5">
+                                {rec.status === 'DRAFT' && (
+                                  <>
+                                    <button
+                                      onClick={() => handleOpenEditReceipt(rec)}
+                                      className="px-2.5 py-1 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded text-[11px] font-medium transition-all inline-flex items-center gap-1 cursor-pointer shadow-xs"
+                                    >
+                                      <Pencil className="w-3 h-3" />
+                                      <span>Edit</span>
+                                    </button>
+                                    <button
+                                      onClick={() => handleValidateReceipt(rec.id)}
+                                      disabled={processingId === rec.id}
+                                      className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-[11px] font-semibold transition-all disabled:opacity-60 inline-flex items-center gap-1 cursor-pointer shadow-xs"
+                                    >
+                                      <CheckCircle2 className="w-3 h-3" />
+                                      <span>Receive</span>
+                                    </button>
+                                  </>
+                                )}
+
+                                {rec.status === 'DONE' && (
+                                  <button
+                                    onClick={() => setPrintReceipt(rec)}
+                                    className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded text-[11px] font-medium transition-all inline-flex items-center gap-1 cursor-pointer"
+                                  >
+                                    <Printer className="w-3 h-3" />
+                                    <span>Print</span>
+                                  </button>
+                                )}
+                              </div>
                             </div>
                           </div>
-
-                          <div className="pt-2 border-t border-slate-100 flex items-center justify-between gap-2">
-                            <button
-                              onClick={() => setSelectedReceiptId(rec.id)}
-                              className="text-[11px] font-semibold text-slate-600 hover:text-slate-900 inline-flex items-center gap-1"
-                            >
-                              <Eye className="w-3 h-3" />
-                              <span>Details</span>
-                            </button>
-
-                            {rec.status === 'DRAFT' && (
-                              <button
-                                onClick={() => handleMarkReady(rec.id)}
-                                disabled={processingId === rec.id}
-                                className="px-2.5 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded text-[11px] font-semibold transition-all disabled:opacity-60"
-                              >
-                                Mark Ready
-                              </button>
-                            )}
-
-                            {rec.status === 'READY' && (
-                              <button
-                                onClick={() => handleValidateReceipt(rec.id)}
-                                disabled={processingId === rec.id}
-                                className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-[11px] font-semibold transition-all disabled:opacity-60"
-                              >
-                                Validate
-                              </button>
-                            )}
-
-                            {rec.status === 'DONE' && (
-                              <button
-                                onClick={() => setPrintReceipt(rec)}
-                                className="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded text-[11px] font-medium transition-all inline-flex items-center gap-1"
-                              >
-                                <Printer className="w-3 h-3" />
-                                <span>Print</span>
-                              </button>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })
-                  )}
+                        );
+                      })
+                    )}
+                  </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })}
           </div>
         </KanbanBoardContainer>
       )}
 
-      {/* New Receipt Modal */}
+      {/* Receipt Modal (Create & Edit) */}
       <Modal
         isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        title="Create Inbound Receipt"
-        subtitle="Specify vendor and items to be received into warehouse locations"
+        onClose={() => {
+          setIsModalOpen(false);
+          setEditingReceipt(null);
+        }}
+        title={editingReceipt ? `Edit Receipt (${editingReceipt.receipt_number})` : 'Create Inbound Receipt'}
+        subtitle={
+          editingReceipt
+            ? 'Update supplier, scheduled date, notes or product quantities before receiving.'
+            : 'Specify vendor and items to be received into warehouse locations'
+        }
         maxWidth="2xl"
       >
-        <form onSubmit={handleCreateReceipt} className="space-y-4 text-xs">
+        <form onSubmit={handleSaveReceipt} className="space-y-4 text-xs">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
               <label className="block font-semibold text-slate-700 mb-1">Supplier Name *</label>
@@ -800,7 +895,7 @@ export const Receipts: React.FC<ReceiptsProps> = ({ initialProductToReceive }) =
               <button
                 type="button"
                 onClick={handleAddItemRow}
-                className="text-brand-600 font-semibold hover:underline inline-flex items-center gap-1"
+                className="text-brand-600 font-semibold hover:underline inline-flex items-center gap-1 cursor-pointer"
               >
                 <Plus className="w-3.5 h-3.5" />
                 <span>Add Item Line</span>
@@ -884,7 +979,7 @@ export const Receipts: React.FC<ReceiptsProps> = ({ initialProductToReceive }) =
                     <button
                       type="button"
                       onClick={() => handleRemoveItemRow(idx)}
-                      className="p-1.5 text-slate-400 hover:text-rose-600 rounded"
+                      className="p-1.5 text-slate-400 hover:text-rose-600 rounded cursor-pointer"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
@@ -897,17 +992,26 @@ export const Receipts: React.FC<ReceiptsProps> = ({ initialProductToReceive }) =
           <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
             <button
               type="button"
-              onClick={() => setIsModalOpen(false)}
-              className="px-4 py-2 border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 font-medium"
+              onClick={() => {
+                setIsModalOpen(false);
+                setEditingReceipt(null);
+              }}
+              className="px-4 py-2 border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 font-medium cursor-pointer"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={submitting}
-              className="px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-lg font-semibold shadow-sm disabled:opacity-60"
+              className="px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-lg font-semibold shadow-sm disabled:opacity-60 cursor-pointer"
             >
-              {submitting ? 'Creating Receipt...' : 'Save Draft Receipt'}
+              {submitting
+                ? editingReceipt
+                  ? 'Saving Changes...'
+                  : 'Creating Receipt...'
+                : editingReceipt
+                ? 'Save Changes'
+                : 'Save Draft Receipt'}
             </button>
           </div>
         </form>

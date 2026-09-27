@@ -6,7 +6,7 @@ from app.api.deps import get_db, get_current_user
 from app.models.receipt import Receipt, ReceiptItem
 from app.models.warehouse import Location, Warehouse
 from app.models.user import User
-from app.schemas.movement import ReceiptCreate, ReceiptOut, ReceiptItemOut
+from app.schemas.movement import ReceiptCreate, ReceiptUpdate, ReceiptOut, ReceiptItemOut
 from app.services.inventory_engine import validate_receipt
 
 router = APIRouter()
@@ -113,6 +113,61 @@ def create_receipt(
     return build_receipt_out(receipt)
 
 
+@router.put("/{receipt_id}", response_model=ReceiptOut)
+def update_receipt(
+    receipt_id: int,
+    receipt_in: ReceiptUpdate,
+    db: Session = Depends(get_db),
+    user: Optional[User] = Depends(get_current_user)
+):
+    """
+    Updates a DRAFT receipt.
+    Only DRAFT receipts can be modified.
+    DONE and CANCELLED receipts are strictly immutable.
+    """
+    receipt = db.query(Receipt).options(
+        joinedload(Receipt.responsible_user),
+        joinedload(Receipt.items).joinedload(ReceiptItem.product),
+        joinedload(Receipt.items).joinedload(ReceiptItem.location)
+    ).filter(Receipt.id == receipt_id).first()
+    if not receipt:
+        raise HTTPException(status_code=404, detail="Receipt not found")
+    if receipt.status != "DRAFT":
+        raise HTTPException(
+            status_code=400,
+            detail=f"Only DRAFT receipts can be edited. Current status: {receipt.status}"
+        )
+
+    if receipt_in.supplier_name is not None:
+        receipt.supplier_name = receipt_in.supplier_name
+    if receipt_in.scheduled_date is not None:
+        receipt.scheduled_date = receipt_in.scheduled_date
+    if receipt_in.receipt_date is not None:
+        receipt.receipt_date = receipt_in.receipt_date
+    if receipt_in.responsible_user_id is not None:
+        receipt.responsible_user_id = receipt_in.responsible_user_id
+    if receipt_in.notes is not None:
+        receipt.notes = receipt_in.notes
+
+    if receipt_in.items is not None:
+        if not receipt_in.items:
+            raise HTTPException(status_code=400, detail="Receipt must contain at least one product item")
+        db.query(ReceiptItem).filter(ReceiptItem.receipt_id == receipt.id).delete()
+        for item in receipt_in.items:
+            r_item = ReceiptItem(
+                receipt_id=receipt.id,
+                product_id=item.product_id,
+                location_id=item.location_id,
+                quantity=item.quantity,
+                unit_cost=item.unit_cost
+            )
+            db.add(r_item)
+
+    db.commit()
+    db.refresh(receipt)
+    return build_receipt_out(receipt)
+
+
 @router.post("/{receipt_id}/mark_ready", response_model=ReceiptOut)
 def mark_receipt_ready(
     receipt_id: int,
@@ -121,7 +176,7 @@ def mark_receipt_ready(
 ):
     """
     Transitions DRAFT → READY.
-    No stock changes occur at this stage — goods are staged for receiving.
+    Kept for backward compatibility.
     """
     receipt = db.query(Receipt).filter(Receipt.id == receipt_id).first()
     if not receipt:
@@ -150,8 +205,7 @@ def validate_receipt_endpoint(
     user: Optional[User] = Depends(get_current_user)
 ):
     """
-    Validates a receipt: READY → DONE.
-    - Requires READY status (enforces one-step-at-a-time workflow)
+    Validates a receipt: DRAFT (or READY) → DONE.
     - Atomically credits stock at each line-item location
     - Generates immutable StockLedger audit records
     - Sets validated_at timestamp
@@ -160,11 +214,10 @@ def validate_receipt_endpoint(
     receipt = db.query(Receipt).filter(Receipt.id == receipt_id).first()
     if not receipt:
         raise HTTPException(status_code=404, detail="Receipt not found")
-    if receipt.status != "READY":
+    if receipt.status not in ["DRAFT", "READY"]:
         raise HTTPException(
             status_code=400,
-            detail=f"Only READY receipts can be validated. Current status: {receipt.status}. "
-                   f"Mark the receipt as Ready first."
+            detail=f"Only DRAFT receipts can be validated/received. Current status: {receipt.status}."
         )
     updated_receipt = validate_receipt(db=db, receipt_id=receipt_id, user_id=user.id if user else None)
     return build_receipt_out(updated_receipt)
